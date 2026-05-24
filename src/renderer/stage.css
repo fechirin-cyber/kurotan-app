@@ -1,0 +1,2038 @@
+/*
+ * stage.css - Stage Window (/3) 専用スタイル
+ * 複数マスコット DOM 並列描画対応
+ */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+:root {
+  --bubble-bg: rgba(30, 30, 50, 0.85);
+  --bubble-text-color: #E8E8F0;
+  --bubble-font-size: 12px;
+  --bubble-font-family: 'Noto Sans JP', 'Meiryo', sans-serif;
+}
+
+html {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+body {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: 'Noto Sans JP', 'Meiryo', sans-serif;
+  font-size: 12px;
+  color: #E8E8F0;
+ /* 全画面透過: body 全体は click-through（pointer-events: none） */
+  pointer-events: none;
+}
+
+/* Stage 全体コンテナ: 全画面透過
+ * B 案: position: fixed で 1 display の viewport 全体に固定する。
+ * 100vw/100vh が BrowserWindow (= 選択 display の workArea) と一致するため
+ * 補正不要。 */
+#mascot-stage {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* ─── マスコットコンテナ（1 匹分 DOM） ───────────────────────── */
+.mascot-container {
+  position: absolute;
+  width: 320px;
+  height: 220px;
+ /* : flex bottom 揃え構造 (§5.4.3.7) */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+ /* : 1px 食い込み演出 (旧 bottom: -(下透明+1)px の代替 §5.4.3.7) */
+  margin-bottom: -1px;
+  pointer-events: none;
+  will-change: transform;
+ /* DOM 追加時にフェードイン */
+  animation: mascot-fadein 0.3s ease forwards;
+}
+
+.mascot-container.is-hidden {
+  display: none;
+}
+
+/* farewell 時の fade-out */
+.mascot-container.farewell-out {
+  animation: mascot-fadeout 0.4s ease forwards;
+}
+
+@keyframes mascot-fadein {
+  from { opacity: 0; transform: translate3d(var(--mx, 0px), calc(var(--my, 0px) + 10px), 0); }
+  to   { opacity: 1; transform: translate3d(var(--mx, 0px), var(--my, 0px), 0); }
+}
+
+@keyframes mascot-fadeout {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* ─── 吹き出し ───────────────────────────────────────────────
+ * 下端固定で上方向に伸びる方式。
+ * 親マスコットの直上に配置し、テキストが増えても親に被らない。
+ */
+.mascot-container .bubble {
+  position: absolute;
+  bottom: 49px; /* 親 visible 高さ 43px + 余白 6px */
+  top: auto;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  width: fit-content;
+  max-width: 304px; /* container 320 - 余白 16 */
+  min-width: 32px;
+  text-align: center;
+  background: var(--bubble-bg);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: var(--bubble-font-size);
+  font-family: var(--bubble-font-family);
+  color: var(--bubble-text-color);
+  line-height: 1.4;
+  max-height: 5.5em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+  pointer-events: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* SD は親 box height 52px なので吹き出し位置 (52 + 6px 余白 = 58px) */
+#mascot-stage[data-art-style="sd"] .mascot-container .bubble {
+  bottom: 58px;
+}
+
+/* pixel は親 visible 64px なので吹き出し位置 (64 + 6px 余白 = 70px) — 0.9.29 修正 */
+#mascot-stage[data-art-style="pixel"] .mascot-container .bubble {
+  bottom: 70px;
+}
+
+.mascot-container .bubble.visible {
+  opacity: 1;
+}
+
+/* ─── セッション名ラベル (0.9.15 / 0.9.17 / 0.9.35 改訂) ─────────
+ * 0.9.17: 既存の #N badge 位置 (parent-mascot 右下隣) に統合。
+ * 0.9.35: 子くろたん (.children-row) と右下を奪い合って隠れる ユーザー報告
+ * を受けて parent-mascot 左下隣に移動 。
+ * 右側は children-row + #N badge、左側は session-label。
+ * トレイ「セッション名表示」で ON/OFF。OFF 時は従来 #N badge にフォールバック。
+ */
+.mascot-container .session-label {
+  position: absolute;
+  bottom: 2px;
+  right: calc(50% + 26px);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+  height: 16px;
+  font-size: 10px;
+  font-family: var(--bubble-font-family);
+  color: #E8E8F0;
+  background: rgba(30, 30, 50, 0.92);
+  border-radius: 4px;
+  padding: 0 5px;
+  line-height: 16px;
+  pointer-events: none;
+  display: none;
+  z-index: 16;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
+}
+
+.mascot-container .session-label.visible {
+  display: block;
+}
+
+/* session-label visible 時は #N badge を非表示 (上書き表示) */
+.mascot-container:has(.session-label.visible) .badge {
+  display: none !important;
+}
+
+/* +N 表示 */
+.mascot-container .bubble .plus-n {
+  font-size: 10px;
+  background: rgba(80, 80, 120, 0.9);
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* ─── 親マスコット本体 ────────────────────────────────────────
+ * §5.4.3.7 : flex 子要素として container 底辺に自動配置。
+ * PNG bottom-trim 後は下透明 = 0px のため bottom: 0 で自然に接地。
+ * height はハードコードせず PNG natural height に自動追従。
+ */
+.mascot-container .parent-mascot {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  top: auto;
+  transform: translateX(-50%);
+  width: 64px;
+ /* height: ハードコード削除 (§5.4.3.7) — PNG natural height に自動追従 */
+  pointer-events: auto;
+  cursor: default;
+  overflow: visible;
+}
+
+/* ─── スプライト ────────────────────────────────────────────── */
+/* §5.4.3.7 : PNG bottom-trim 後は下透明 = 0px のため bottom: 0 で自然に接地。
+ * height / bottom のハードコードは削除済 ()。 */
+.mascot-container .sprite {
+  width: 64px;
+ /* height: ハードコード削除 (§5.4.3.7) */
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  image-rendering: pixelated;
+  background-image: url('../../assets/pixel/idle.png');
+  background-size: 64px 43px; /* trim 後 natural size (sd 基準デフォルト) */
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* 状態別スプライト切替 */
+.mascot-container[data-state="idle"] .sprite {
+  background-image: url('../../assets/pixel/idle.png');
+}
+.mascot-container[data-state="thinking"] .sprite {
+  background-image: url('../../assets/pixel/thinking.png');
+}
+.mascot-container[data-state="tool_read"] .sprite {
+  background-image: url('../../assets/pixel/tool_read.png');
+}
+.mascot-container[data-state="tool_edit"] .sprite {
+  background-image: url('../../assets/pixel/tool_edit.png');
+}
+.mascot-container[data-state="tool_bash"] .sprite {
+  background-image: url('../../assets/pixel/tool_bash.png');
+}
+.mascot-container[data-state="tool_web"] .sprite {
+  background-image: url('../../assets/pixel/tool_web.png');
+}
+.mascot-container[data-state="tool_skill"] .sprite {
+  background-image: url('../../assets/pixel/tool_skill.png');
+}
+.mascot-container[data-state="tool_other"] .sprite {
+  background-image: url('../../assets/pixel/tool_other.png');
+}
+.mascot-container[data-state="success"] .sprite {
+  background-image: url('../../assets/pixel/success.png');
+}
+.mascot-container[data-state="error"] .sprite {
+  background-image: url('../../assets/pixel/error.png');
+}
+.mascot-container[data-state="permission"] .sprite {
+  background-image: url('../../assets/pixel/permission.png');
+}
+.mascot-container[data-state="farewell"] .sprite {
+  background-image: url('../../assets/pixel/farewell.png');
+}
+/* sleeping スプライト切替 (pixel: kurotan_sleep.png / SD は pixel で代用) */
+.mascot-container.sleeping .sprite {
+  background-image: url('../../assets/pixel/kurotan_sleep.png');
+}
+
+
+/* zzz スプライト stub (§5.9 凍結中は idle 画像で代用 / で専用アセットに差し替え予定)
+ * data-context-level="zzz" が付与されたとき参照する想定 (§5.9 接続点)。 */
+.mascot-container[data-context-level="zzz"] .sprite {
+  background-image: url('../../assets/pixel/zzz.png'); /* stub: idle.png コピー */
+}
+/* ─── offline 状態 ─────────────────────────────────────────── */
+.mascot-container[data-state="offline"] .parent-mascot {
+  opacity: 0.6;
+}
+
+.mascot-container .offline-exclaim {
+  display: none;
+  position: absolute;
+  top: -8px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  background: rgba(255, 80, 80, 0.9);
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: bold;
+  color: #fff;
+  text-align: center;
+  line-height: 16px;
+  z-index: 20;
+}
+
+.mascot-container[data-state="offline"] .offline-exclaim {
+  display: block;
+}
+
+.offline-exclaim::after {
+  content: '!';
+}
+
+/* ─── 番号バッジ ────────────────────────────────────────────── */
+.mascot-container .badge {
+  display: none;
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  background: rgba(30, 30, 50, 0.85);
+  border-radius: 4px;
+  font-size: 9px;
+  color: #E8E8F0;
+  text-align: center;
+  line-height: 16px;
+  padding: 0 2px;
+  z-index: 15;
+}
+
+.mascot-container[data-badge-index]:not([data-badge-index="1"]) .badge {
+  display: block;
+}
+
+/* ─── 呼吸アニメ（idle 常時 / CSS keyframes のみ） ──────────── */
+/* 足元固定で頭上が伸縮するよう transform-origin を bottom center に */
+.mascot-container[data-state="idle"] .parent-mascot,
+.mascot-container[data-state="offline"] .parent-mascot {
+  animation: breathing 3s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+@keyframes breathing {
+  0%,  100% { transform: translateX(-50%) scaleY(1);    }
+  50%        { transform: translateX(-50%) scaleY(0.97); }
+}
+
+/* success ぴょんっアニメ (1 秒ごとに軽くポップ・10 回で停止) */
+.mascot-container[data-state="success"] .parent-mascot {
+  animation: success-jump 1s ease-out 10;
+  animation-fill-mode: forwards;
+  transform: translateX(-50%);
+}
+
+@keyframes success-jump {
+  0%   { transform: translateX(-50%) translateY(0); }
+  18%  { transform: translateX(-50%) translateY(-8px); }
+  32%  { transform: translateX(-50%) translateY(-2px); }
+  45%  { transform: translateX(-50%) translateY(0); }
+  100% { transform: translateX(-50%) translateY(0); }
+}
+
+/* ─── 睡眠 / 目覚め モーション ────────────────────────────────── */
+/*
+ * sleeping: 片側に傾いて静止する「眠り姿勢」
+ * - sleep-pose: 12s 単一 keyframes に傾き + 深呼吸 + 微細ゆれを統合
+ * 傾き -8deg を大部分で維持しつつ scaleY と rotate で複合感を出す。
+ * transform の競合を避けるため単一アニメに統合。
+ * - translateX(-50%) は parent-mascot の left:50% 補正として常に先頭に維持。
+ * filter は使わない 。
+ */
+.mascot-container.sleeping .parent-mascot {
+  animation: sleep-pose 12s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+
+/*
+ * sleep-pose: 12s 1周期
+ * 0-15% : 直立→傾き-8deg へゆっくり入眠
+ * 15-33% : -8deg で深呼吸 (scaleY 1→0.93)
+ * 33-50% : -8deg を維持して戻す呼気 (scaleY 0.93→1)
+ * 50-66% : -8deg + 寝息ゆれ -10deg 方向へ
+ * 66-83% : -8deg + 寝息ゆれ -6deg へ折り返し
+ * 83-100%: -8deg へ戻って安定
+ */
+@keyframes sleep-pose {
+  0%    { transform: translateX(-50%) rotate(0deg)   scaleY(1);    }
+  15%   { transform: translateX(-50%) rotate(-8deg)  scaleY(1);    }
+  33%   { transform: translateX(-50%) rotate(-8deg)  scaleY(0.93); }
+  50%   { transform: translateX(-50%) rotate(-8deg)  scaleY(1);    }
+  58%   { transform: translateX(-50%) rotate(-10deg) scaleY(0.97); }
+  75%   { transform: translateX(-50%) rotate(-6deg)  scaleY(1);    }
+  83%   { transform: translateX(-50%) rotate(-8deg)  scaleY(0.95); }
+  100%  { transform: translateX(-50%) rotate(-8deg)  scaleY(1);    }
+}
+
+/* 💤 粒子 (pixel: bottom 38px = 顔上端付近) */
+.mascot-container .sleep-particle {
+  position: absolute;
+  bottom: 38px;
+  left: calc(50% + 18px);
+  font-size: 16px;
+  color: #b0c4ff;
+  pointer-events: none;
+  opacity: 0;
+  animation: sleep-zzz 3s ease-out forwards;
+  text-shadow: 0 0 4px rgba(150, 180, 255, 0.5);
+  z-index: 11;
+}
+
+/* SD: マスコット visible 40px → pixel と同値 bottom 38px で顔上端付近 */
+#mascot-stage[data-art-style="sd"] .mascot-container .sleep-particle {
+  bottom: 38px;
+}
+
+@keyframes sleep-zzz {
+  0%   { opacity: 0; transform: translate(0, 4px) scale(0.6) rotate(-10deg); }
+  20%  { opacity: 0.9; transform: translate(4px, -8px) scale(1) rotate(0deg); }
+  70%  { opacity: 0.9; transform: translate(12px, -28px) scale(1) rotate(15deg); }
+  100% { opacity: 0; transform: translate(20px, -42px) scale(0.85) rotate(20deg); }
+}
+
+/* waking: ハッ！と覚醒する 0.8s */
+.mascot-container.waking .parent-mascot {
+  animation: wake-startle 0.8s ease-out;
+}
+
+@keyframes wake-startle {
+  0%   { transform: translateX(-50%) scale(1)    translateY(0); }
+  15%  { transform: translateX(-50%) scale(1.12) translateY(-6px); }
+  30%  { transform: translateX(-50%) scale(0.96) translateY(0); }
+  45%  { transform: translateX(-50%) scale(1.05) translateY(-3px); }
+  60%  { transform: translateX(-50%) scale(0.98) translateY(0); }
+  100% { transform: translateX(-50%) scale(1)    translateY(0); }
+}
+
+/* 目覚めの "！" マーク */
+.mascot-container .wake-mark {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.4);
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffd84a;
+  text-shadow: 0 0 6px rgba(255, 216, 74, 0.8);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 12;
+  animation: wake-mark-pop 0.7s ease-out forwards;
+}
+
+@keyframes wake-mark-pop {
+  0%   { opacity: 0;   transform: translateX(-50%) scale(0.3) translateY(8px); }
+  30%  { opacity: 1;   transform: translateX(-50%) scale(1.2) translateY(-4px); }
+  60%  { opacity: 1;   transform: translateX(-50%) scale(1)   translateY(0); }
+  100% { opacity: 0;   transform: translateX(-50%) scale(0.9) translateY(-4px); }
+}
+
+/* PostToolUse 時の "作業中だよ〜" かわいい演出 */
+/* 親マスコットがふんふん♪ と左右にゆれる */
+.mascot-container .parent-mascot.task-done-wiggle {
+  animation: task-done-wiggle 0.6s ease-in-out;
+}
+
+@keyframes task-done-wiggle {
+  0%,100% { transform: translateX(-50%) rotate(0deg); }
+  20%     { transform: translateX(-50%) rotate(-6deg); }
+  40%     { transform: translateX(-50%) rotate(5deg); }
+  60%     { transform: translateX(-50%) rotate(-4deg); }
+  80%     { transform: translateX(-50%) rotate(3deg); }
+}
+
+/* きらめき粒子（✨ ♪ 💭 など）が頭上から浮き上がってフェードアウト */
+.mascot-container .task-done-particle {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  font-size: 16px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(calc(-50% + var(--px, 0px)), 0);
+  animation: task-done-float 1.1s ease-out forwards;
+  z-index: 11;
+  text-shadow: 0 0 4px rgba(255, 240, 180, 0.7);
+  will-change: transform, opacity;
+}
+
+@keyframes task-done-float {
+  0%   { opacity: 0;   transform: translate(calc(-50% + var(--px, 0px)), 4px) scale(0.4); }
+  25%  { opacity: 1;   transform: translate(calc(-50% + var(--px, 0px)), -8px) scale(1.05); }
+  60%  { opacity: 1;   transform: translate(calc(-50% + var(--px, 0px)), -22px) scale(1); }
+  100% { opacity: 0;   transform: translate(calc(-50% + var(--px, 0px)), -38px) scale(0.85); }
+}
+
+/* error ぶるぶるアニメ */
+.mascot-container[data-state="error"] .parent-mascot {
+  animation: error-shake 0.4s ease-out;
+  transform: translateX(-50%);
+}
+
+@keyframes error-shake {
+  0%,100% { transform: translateX(-50%); }
+  20%     { transform: translateX(calc(-50% - 4px)); }
+  40%     { transform: translateX(calc(-50% + 4px)); }
+  60%     { transform: translateX(calc(-50% - 3px)); }
+  80%     { transform: translateX(calc(-50% + 3px)); }
+}
+
+/* farewell 中はドラッグ不可 (pointer-events を none に落として OS イベントを止める) */
+.mascot-container[data-state="farewell"] .parent-mascot {
+  pointer-events: none;
+}
+
+/* farewell 前傾アニメ */
+.mascot-container[data-state="farewell"] .parent-mascot {
+  animation: farewell-bow 0.5s ease forwards;
+  transform-origin: bottom center;
+  transform: translateX(-50%);
+}
+
+@keyframes farewell-bow {
+  0%   { transform: translateX(-50%) rotate(0deg); }
+  50%  { transform: translateX(-50%) rotate(-20deg); }
+  100% { transform: translateX(-50%) rotate(-15deg); }
+}
+
+/* farewell 手振り (wave → bow の前に発火)
+ * specificity を [data-state="farewell"] .parent-mascot と同等以上にするため
+ * .mascot-container .parent-mascot.waving-bye で記述して animation を上書きする */
+.mascot-container .parent-mascot.waving-bye {
+  animation: wave-hand 0.8s ease-in-out !important;
+  transform-origin: bottom center;
+}
+
+@keyframes wave-hand {
+  0%   { transform: translateX(-50%) rotate(0deg); }
+  20%  { transform: translateX(-50%) rotate(8deg); }
+  40%  { transform: translateX(-50%) rotate(-8deg); }
+  60%  { transform: translateX(-50%) rotate(8deg); }
+  80%  { transform: translateX(-50%) rotate(-8deg); }
+  100% { transform: translateX(-50%) rotate(0deg); }
+}
+
+/* 子くろたん 小手振り (despawn 直前) */
+.child-mascot.waving-bye-mini {
+  animation: wave-mini 0.5s ease-in-out !important;
+  transform-origin: bottom center;
+}
+
+@keyframes wave-mini {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(5deg); }
+  75%      { transform: rotate(-5deg); }
+}
+
+/* ─── 子くろたん row ───────────────────────────────────────────
+ * 親マスコットの右横に並べる。bottom: 0 で container 底辺に揃え、
+ * 親と同じ「地面」に立たせる。
+ */
+.mascot-container .children-row {
+  position: absolute;
+  bottom: 0;
+  left: calc(50% + 50px); /* 0.9.39: pixel 子 48×32 化に追従 (旧 +36, 子幅 24→48 +右余白) */
+  right: 4px;
+  height: 32px; /* 0.9.39: pixel 子 PNG 統一 48×32 */
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 2px;
+  pointer-events: none;
+}
+
+#mascot-stage[data-art-style="sd"] .mascot-container .children-row {
+ /* 親 width/2 = 20px + gap 4px = 24px */
+  left: calc(50% + 24px);
+  height: 35px; /* SD 子 max natural height = 35 (idle/farewell/mimic) */
+}
+
+/* 子マスコット:
+ * §5.4.3.7 / : PNG bottom-trim 後は下透明 = 0px のため bottom: 0 で自然に接地。
+ * height はハードコードせず PNG natural height に自動追従。
+ */
+.child-mascot {
+  width: 32px;
+ /* height: ハードコード削除 (§5.4.3.7) — PNG natural height に自動追従 */
+  position: relative;
+  flex-shrink: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.child-mascot .child-sprite {
+  width: 32px;
+ /* height: ハードコード削除 (§5.4.3.7) */
+  position: absolute;
+ /* bottom: ハードコード削除 → 0 (§5.4.3.7) */
+  bottom: 0;
+  left: 0;
+  image-rendering: pixelated;
+  background-image: url('../../assets/pixel/child/child_idle.png');
+  background-size: 32px 19px; /* trim 後 natural size (pixel 子基準デフォルト) */
+  background-position: center;
+  background-repeat: no-repeat;
+ /* breathing: 3s の scaleY 微伸縮 */
+  animation: child-breathing 3s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+/* 子くろたん breathing + とことこ歩き scaleY 微振動の合成 keyframe
+ * 3s 周期の呼吸 (scaleY 0.97) に 0.3s 周期の小刻みステップ (scaleY 0.95) を重畳 */
+@keyframes child-breathing {
+  0%   { transform: scaleY(1);    }
+  5%   { transform: scaleY(0.95); }
+  10%  { transform: scaleY(1);    }
+  15%  { transform: scaleY(0.95); }
+  20%  { transform: scaleY(1);    }
+  25%  { transform: scaleY(0.95); }
+  30%  { transform: scaleY(1);    }
+  35%  { transform: scaleY(0.95); }
+  40%  { transform: scaleY(1);    }
+  45%  { transform: scaleY(0.95); }
+  50%  { transform: scaleY(0.97); }
+  55%  { transform: scaleY(0.95); }
+  60%  { transform: scaleY(0.97); }
+  65%  { transform: scaleY(0.95); }
+  70%  { transform: scaleY(0.97); }
+  75%  { transform: scaleY(0.95); }
+  80%  { transform: scaleY(0.97); }
+  85%  { transform: scaleY(0.95); }
+  90%  { transform: scaleY(0.97); }
+  95%  { transform: scaleY(0.95); }
+  100% { transform: scaleY(1);    }
+}
+
+/* 子くろたん 水平ウォーキング (JS から --child-tx を操作)
+ * translate プロパティは transform と独立しているため child-popin/farewell-out と競合しない */
+.child-mascot {
+  translate: var(--child-tx, 0px) 0px;
+}
+
+/* 0.9.42: 親と同じ CSS 変数を採用して色を同期 (ユーザー報告: 子が親と同じ色になっていない)
+ * フォントサイズは小さめに保ちつつ、背景色 / 文字色 / フォントは設定で親と同期する */
+.child-mascot .child-bubble {
+  position: absolute;
+ /* badge と縦に重ならないよう上に移動 (旧: 36px) */
+  bottom: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: var(--bubble-bg, rgba(30, 30, 50, 0.85));
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 10px;
+  font-family: var(--bubble-font-family, inherit);
+  color: var(--bubble-text-color, #E8E8F0);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.child-mascot .child-bubble.visible {
+  opacity: 1;
+}
+
+/* §5.6.7 agent_type バッジ: 1.5 秒表示 / 8 文字上限+ellipsis / 最大幅 56px / フォント 9px */
+.child-mascot .agent-type-badge {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 56px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--bubble-bg, rgba(30, 30, 50, 0.85));
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 9px;
+  font-family: var(--bubble-font-family, inherit);
+  color: var(--bubble-text-color, #E8E8F0);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.child-mascot .agent-type-badge.visible {
+  opacity: 1;
+}
+
+/* 子くろたん ポップインアニメ */
+@keyframes child-popin {
+  0%   { opacity: 0; transform: scale(0.3) translateY(10px); }
+  60%  { opacity: 1; transform: scale(1.1) translateY(-2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* child-popin は DOM 追加直後の is-spawning クラス付与中のみ発火させる。
+ * 静的ルールとして .child-mascot に常時適用すると、親の data-state 変化に伴う
+ * CSS 再計算で forwards fill がリセットされ子くろたんが一瞬消える flicker が発生する。
+ * JS 側 spawnChild() で is-spawning を追加し、300ms 後に除去する (commit 修正)。 */
+.child-mascot.is-spawning {
+  animation: child-popin 0.3s ease forwards;
+}
+
+/* 子くろたん フェードアウト */
+@keyframes child-fadeout {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.5) translateY(4px); }
+}
+
+.child-mascot.farewell-out {
+  animation: child-fadeout 0.4s ease forwards;
+}
+
+/* ─── ULTRATHINK イースターエッグ ──────────────────────────── */
+.mascot-container.ultrathink .sprite {
+  animation: ultrathink-hue 1.5s linear infinite;
+  filter: saturate(1.5) brightness(1.15);
+}
+
+/* 0.9.43: 子くろたんも親と同じ hue-rotate を適用 (ユーザー報告: 黄色の親でも子はオレンジのまま)
+ * child-breathing と共存させるため animation を 2 つチェーン */
+.mascot-container.ultrathink .child-sprite {
+  animation: ultrathink-hue 1.5s linear infinite, child-breathing 3s ease-in-out infinite;
+  filter: saturate(1.5) brightness(1.15);
+}
+
+@keyframes ultrathink-hue {
+  0%   { filter: hue-rotate(0deg) saturate(1.5) brightness(1.15); }
+  100% { filter: hue-rotate(360deg) saturate(1.5) brightness(1.15); }
+}
+
+/* 浮遊: 12〜22px 浮上 + 微ゆれ (ドラゴンボール風) */
+.mascot-container.ultrathink .parent-mascot {
+  animation: ultrathink-float 1.2s ease-in-out infinite alternate;
+  transform-origin: bottom center;
+}
+
+@keyframes ultrathink-float {
+  0%   { transform: translateX(-50%) translateY(-12px) rotate(-1deg); }
+  100% { transform: translateX(-50%) translateY(-22px) rotate(1deg); }
+}
+
+/* マトリックス背景レイヤー: マスコット中心基準の円形ゾーン */
+.mascot-container .matrix-layer {
+  display: none;
+  position: absolute;
+  bottom: -40px;       /* マスコット足元 (bottom:0) を中心に下まで拡張 */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 240px;
+  height: 280px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 50%;  /* 円形クリップで放射感 */
+  -webkit-mask-image: radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 100%);
+  mask-image: radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 100%);
+}
+
+.mascot-container.ultrathink .matrix-layer {
+  display: block;
+}
+
+/* matrix-col: bottom 基準で下から上へ流れる */
+.matrix-col {
+  position: absolute;
+  bottom: 0;
+  top: auto;
+  width: 14px;
+  font-size: 12px;
+  font-family: monospace;
+  color: rgba(50, 255, 130, 0.85);
+  text-shadow: 0 0 4px rgba(50, 255, 130, 0.8);
+  line-height: 1.2;
+  white-space: pre;
+  animation: matrix-fall linear infinite;
+  pointer-events: none;
+}
+
+@keyframes matrix-fall {
+  0%   { transform: translateY(100%); }
+  100% { transform: translateY(-100%); }
+}
+
+/* ─── 黄金オーラ (ドラゴンボール風) ──────────────────────── */
+.mascot-container .aura-layer {
+  display: none;
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+  background: radial-gradient(circle,
+    rgba(255, 220, 80, 0.6) 0%,
+    rgba(255, 180, 30, 0.4) 30%,
+    rgba(255, 120, 0, 0.2) 60%,
+    rgba(255, 80, 0, 0) 100%);
+  filter: blur(4px);
+  animation: aura-pulse 0.6s ease-in-out infinite alternate;
+  mix-blend-mode: screen;
+}
+
+.mascot-container.ultrathink .aura-layer {
+  display: block;
+}
+
+@keyframes aura-pulse {
+  0%   { transform: translateX(-50%) scale(0.95); opacity: 0.7; }
+  100% { transform: translateX(-50%) scale(1.15); opacity: 1; }
+}
+
+/* ─── 地面影 (浮遊感強調) ────────────────────────────────── */
+.mascot-container .float-shadow {
+  display: none;
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.mascot-container.ultrathink .float-shadow {
+  display: block;
+  animation: shadow-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes shadow-pulse {
+  0%   { transform: translateX(-50%) scale(0.8); opacity: 0.5; }
+  100% { transform: translateX(-50%) scale(1.0); opacity: 0.7; }
+}
+
+/* ─── ドラッグ中カーソル ─────────────────────────────────────── */
+.mascot-container.dragging .parent-mascot {
+  cursor: grabbing;
+}
+
+.mascot-container .parent-mascot {
+  cursor: grab;
+}
+
+/* ─── SD アートスタイル オーバーライド ───────────────────────── */
+/* #mascot-stage[data-art-style="sd"] 配下でサイズ・レンダリングを SD 用に変更 */
+/* SD 親: state 間最大 natural size = 64x52 (drowsy/sleepy/stretch/yawn §5.4.3.7) */
+
+#mascot-stage[data-art-style="sd"] .mascot-container .parent-mascot {
+  width: 64px;
+  height: 52px; /* 最大 natural height (drowsy/sleepy/stretch/yawn = 52) */
+}
+
+#mascot-stage[data-art-style="sd"] .mascot-container .sprite {
+  width: 64px;
+  height: 52px; /* parent-mascot に合わせる */
+  bottom: 0;
+  image-rendering: pixelated;
+  background-size: auto; /* natural サイズ維持 (state 間サイズ差を歪めない) */
+  background-position: bottom center; /* 下揃え: 低い PNG は上端に透明余白 */
+  background-repeat: no-repeat;
+}
+
+/* SD 子: state 間最大 natural size = 48x35 (idle/farewell/mimic = 35, spawn = 32 §5.4.3.7) */
+#mascot-stage[data-art-style="sd"] .child-mascot {
+  width: 48px;
+  height: 35px; /* 最大 natural height (idle/farewell/mimic = 35) */
+}
+
+#mascot-stage[data-art-style="sd"] .child-mascot .child-sprite {
+  width: 48px;
+  height: 35px;
+  bottom: 0;
+  image-rendering: pixelated;
+  background-size: auto; /* natural サイズ維持 (spawn 32px が伸長しない) */
+  background-position: bottom center;
+  background-repeat: no-repeat;
+}
+
+/* ─── pixel アートスタイル オーバーライド ────────────────────── */
+/* 0.9.29 fix: PNG 実寸 96x64 に合わせて canvas を拡大 (旧 spec の 32x25 だと
+ * bottom-center しか表示されず親マスコット頭・胴体が見切れていた)。
+ * §5.4.3.7 旧仕様 32x25 は廃止、PNG 自体が 3x scale で書き出されているため。 */
+
+#mascot-stage[data-art-style="pixel"] .mascot-container .parent-mascot {
+  width: 96px;
+  height: 64px;
+}
+
+#mascot-stage[data-art-style="pixel"] .mascot-container .sprite {
+  width: 96px;
+  height: 64px;
+  bottom: 0;
+  image-rendering: pixelated;
+  background-size: auto; /* natural サイズ維持 */
+  background-position: bottom center;
+  background-repeat: no-repeat;
+}
+
+/* 0.9.39: pixel 子 PNG 統一 48×32 */
+#mascot-stage[data-art-style="pixel"] .child-mascot {
+  width: 48px;
+  height: 32px;
+}
+
+#mascot-stage[data-art-style="pixel"] .child-mascot .child-sprite {
+  width: 48px;
+  height: 32px;
+  bottom: 0;
+  image-rendering: pixelated;
+  background-size: auto;
+  background-position: bottom center;
+  background-repeat: no-repeat;
+}
+
+/* SD × 状態別スプライト切替 (inline style を使わず CSS に委譲するため必須) */
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="idle"] .sprite {
+  background-image: url('../../assets/sd/idle.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="thinking"] .sprite {
+  background-image: url('../../assets/sd/thinking.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="tool_read"] .sprite {
+  background-image: url('../../assets/sd/tool_read.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="tool_edit"] .sprite {
+  background-image: url('../../assets/sd/tool_edit.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="tool_bash"] .sprite {
+  background-image: url('../../assets/sd/tool_bash.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="tool_web"] .sprite {
+  background-image: url('../../assets/sd/tool_web.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="tool_skill"] .sprite {
+  background-image: url('../../assets/sd/tool_skill.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="tool_other"] .sprite {
+  background-image: url('../../assets/sd/tool_other.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="success"] .sprite {
+  background-image: url('../../assets/sd/success.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="error"] .sprite {
+  background-image: url('../../assets/sd/error.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="permission"] .sprite {
+  background-image: url('../../assets/sd/permission.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="farewell"] .sprite {
+  background-image: url('../../assets/sd/farewell.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="offline"] .sprite {
+  background-image: url('../../assets/sd/offline.png');
+}
+/* SD × sleeping: specificity 1,3,0 で [data-state="idle"] (同 1,3,0) と同順位に揃える。
+ * .sleeping は data-state とは独立したクラスで付与されるため、idle ルール (同行数=先勝ち)
+ * を後出しで上書きする必要がある。この 1 ルールを offline 直後に置くことで
+ * sleeping が常に idle より後で解決され、sleep スプライトが有効になる。 */
+#mascot-stage[data-art-style="sd"] .mascot-container.sleeping .sprite {
+  background-image: url('../../assets/sd/kurotan_sleep.png');
+}
+
+/* SD 版子スプライト */
+#mascot-stage[data-art-style="sd"] .child-mascot .child-sprite {
+  background-image: url('../../assets/sd/child/child_idle.png');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * §5.4 子くろたん ツール別スプライト切替 (親 data-state 連動)
+ * 親の data-state が tool_* に切り替わると子スプライトも対応画像に変わる。
+ * pixel 版 / SD 版それぞれ 7 種 × 2 = 14 ルール。
+ * child_mimic_default は Agent 専用デフォルト (何でもないとき)。
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* zzz スプライト stub — SD 版 (§5.9 凍結中は idle 画像で代用 / で差し替え予定) */
+#mascot-stage[data-art-style="sd"] .mascot-container[data-context-level="zzz"] .sprite {
+  background-image: url('../../assets/sd/zzz.png'); /* stub: sd/idle.png コピー */
+}
+
+/* ── pixel 版 ── */
+.mascot-container[data-state="tool_read"]  .child-mascot .child-sprite {
+  background-image: url('../../assets/pixel/child/child_mimic_read.png');
+}
+.mascot-container[data-state="tool_edit"]  .child-mascot .child-sprite {
+  background-image: url('../../assets/pixel/child/child_mimic_edit.png');
+}
+.mascot-container[data-state="tool_bash"]  .child-mascot .child-sprite {
+  background-image: url('../../assets/pixel/child/child_mimic_bash.png');
+}
+.mascot-container[data-state="tool_web"]   .child-mascot .child-sprite {
+  background-image: url('../../assets/pixel/child/child_mimic_web.png');
+}
+.mascot-container[data-state="tool_skill"] .child-mascot .child-sprite {
+  background-image: url('../../assets/pixel/child/child_mimic_skill.png');
+}
+.mascot-container[data-state="tool_other"] .child-mascot .child-sprite {
+  background-image: url('../../assets/pixel/child/child_mimic_other.png');
+}
+/* idle / thinking / success / error 等 → child_idle.png (既存 .child-mascot .child-sprite で定義済み)
+ * Agent 生成直後 (toolName 未定) は child_mimic_default.png をデフォルトにしたい場合、
+ * JS で child.dataset.tool = 'default' を付与し下記セレクタで切替可能 (将来拡張)。
+ * .mascot-container .child-mascot[data-tool=default] .child-sprite {
+ * background-image: url('../../assets/pixel/child/child_mimic_default.png');
+ * } */
+
+/* ── SD 版 ── */
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="tool_read"] .child-mascot .child-sprite {
+  background-image: url('../../assets/sd/child/child_mimic_read.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="tool_edit"] .child-mascot .child-sprite {
+  background-image: url('../../assets/sd/child/child_mimic_edit.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="tool_bash"] .child-mascot .child-sprite {
+  background-image: url('../../assets/sd/child/child_mimic_bash.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="tool_web"] .child-mascot .child-sprite {
+  background-image: url('../../assets/sd/child/child_mimic_web.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="tool_skill"] .child-mascot .child-sprite {
+  background-image: url('../../assets/sd/child/child_mimic_skill.png');
+}
+#mascot-stage[data-art-style="sd"] .mascot-container[data-state="tool_other"] .child-mascot .child-sprite {
+  background-image: url('../../assets/sd/child/child_mimic_other.png');
+}
+/* SD: idle 等 → child_idle.png (既存 SD 子スプライトルールで定義済み)
+ * .child-mascot[data-tool="default"] .child-sprite に child_mimic_default.png を当てる (将来拡張)。
+ * #mascot-stage[data-art-style="sd"] .child-mascot[data-tool="default"] .child-sprite {
+ * background-image: url('../../assets/sd/child/child_mimic_default.png');
+ * } */
+
+/* ═══════════════════════════════════════════════════════════════
+ * §VFX-1 状態別ボディアニメ強化
+ * transform-origin: bottom center 必須 (足元浮き禁止)
+ * translateX(-50%) は parent-mascot の left:50% 補正として常に維持する
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* ─── thinking: 前後ゆれ ──────────────────────────────────────── */
+.mascot-container[data-state="thinking"] .parent-mascot {
+  animation: thinking-sway 2.5s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+@keyframes thinking-sway {
+  0%,100% { transform: translateX(-50%) rotate(0deg); }
+  30%     { transform: translateX(-50%) rotate(-3deg); }
+  70%     { transform: translateX(-50%) rotate(3deg); }
+}
+
+/* ─── tool_read: ふんわり上下ゆれ (虫眼鏡探索感) 振幅 5px ─────── */
+.mascot-container[data-state="tool_read"] .parent-mascot {
+  animation: tool-read-bob 1.8s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+@keyframes tool-read-bob {
+  0%,100% { transform: translateX(-50%) translateY(0); }
+  50%     { transform: translateX(-50%) translateY(-5px); }
+}
+
+/* ─── tool_edit: コツコツ小刻み上下 0.5s 振幅 4px ───────────── */
+.mascot-container[data-state="tool_edit"] .parent-mascot {
+  animation: tool-edit-tap 0.5s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+@keyframes tool-edit-tap {
+  0%,100% { transform: translateX(-50%) translateY(0); }
+  50%     { transform: translateX(-50%) translateY(-4px); }
+}
+
+/* ─── tool_bash: スパナ振り rotate ±12° ─────────────────────── */
+.mascot-container[data-state="tool_bash"] .parent-mascot {
+  animation: tool-bash-swing 0.4s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+@keyframes tool-bash-swing {
+  0%,100% { transform: translateX(-50%) rotate(0deg); }
+  25%     { transform: translateX(-50%) rotate(-12deg); }
+  75%     { transform: translateX(-50%) rotate(12deg); }
+}
+
+/* ─── tool_web: 左右ゆれ + ふわっと光る 1.2s ────────────────── */
+.mascot-container[data-state="tool_web"] .parent-mascot {
+  animation: tool-web-drift 1.2s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+@keyframes tool-web-drift {
+  0%,100% { transform: translateX(calc(-50% + 0px)); opacity: 1.0; }
+  30%     { transform: translateX(calc(-50% - 4px)); opacity: 0.87; }
+  70%     { transform: translateX(calc(-50% + 4px)); opacity: 0.87; }
+}
+
+/* ─── tool_skill: scale 脈動 (魔法/スキル感) 1.0s ───────────── */
+.mascot-container[data-state="tool_skill"] .parent-mascot {
+  animation: tool-skill-pulse 1.0s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+@keyframes tool-skill-pulse {
+  0%,100% { transform: translateX(-50%) scale(1.00); }
+  50%     { transform: translateX(-50%) scale(1.05); }
+}
+
+/* ─── tool_other: 上下ゆれ (汎用シンプル) 1.5s ─────────────── */
+.mascot-container[data-state="tool_other"] .parent-mascot {
+  animation: tool-other-sway 1.5s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+@keyframes tool-other-sway {
+  0%,100% { transform: translateX(-50%) translateY(0); }
+  50%     { transform: translateX(-50%) translateY(-3px); }
+}
+
+/* ─── permission: 首かしげ (rotate 8deg 静止) ────────────────── */
+.mascot-container[data-state="permission"] .parent-mascot {
+  animation: permission-tilt 0.35s ease-out forwards;
+  transform-origin: bottom center;
+}
+
+@keyframes permission-tilt {
+  0%   { transform: translateX(-50%) rotate(0deg); }
+  100% { transform: translateX(-50%) rotate(8deg); }
+}
+
+/* ─── drag 中: おっとスケールダウン ─────────────────────────── */
+/* NOTE: .dragging 内の .parent-mascot は cursor:grabbing を上書き不可にするため
+ * !important を使用。transform は既存の translateX(-50%) に合成する。 */
+.mascot-container.dragging .parent-mascot {
+  animation: none !important;
+  transform: translateX(-50%) scale(0.95) !important;
+  transform-origin: bottom center;
+  transition: transform 0.15s ease;
+  cursor: grabbing;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * §VFX-2 頭上エフェクト要素 (CSS のみ / JS で DOM 追加)
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* ─── thinking "..." パーティクル ────────────────────────────── */
+.mascot-container .thinking-dots {
+  position: absolute;
+  bottom: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 13px;
+  color: #c0c8ff;
+  letter-spacing: 2px;
+  pointer-events: none;
+  z-index: 11;
+  animation: thinking-dots-pulse 1.2s ease-in-out infinite;
+  text-shadow: 0 0 4px rgba(180, 190, 255, 0.6);
+  will-change: opacity, transform;
+}
+
+@keyframes thinking-dots-pulse {
+  0%,100% { opacity: 0.3; transform: translateX(-50%) translateY(0); }
+  50%     { opacity: 1;   transform: translateX(-50%) translateY(-3px); }
+}
+
+/* ─── tool_read ✦エフェクト ──────────────────────────────────── */
+.mascot-container .tool-read-sparkle {
+  position: absolute;
+  bottom: 56px;
+  left: 50%;
+  font-size: 14px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 11;
+  animation: tool-read-pop 1.8s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes tool-read-pop {
+  0%   { opacity: 0;   transform: translateX(-50%) scale(0.5) translateY(4px); }
+  25%  { opacity: 1;   transform: translateX(-50%) scale(1.1) translateY(-2px); }
+  60%  { opacity: 0.8; transform: translateX(-50%) scale(1)   translateY(-6px); }
+  100% { opacity: 0;   transform: translateX(-50%) scale(0.8) translateY(-10px); }
+}
+
+/* ─── tool_edit ✎ エフェクト ─────────────────────────────────── */
+.mascot-container .tool-edit-symbol {
+  position: absolute;
+  bottom: 56px;
+  left: 50%;
+  font-size: 14px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 11;
+  animation: tool-edit-pop 1.6s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes tool-edit-pop {
+  0%   { opacity: 0;   transform: translateX(-50%) scale(0.5) translateY(4px); }
+  25%  { opacity: 1;   transform: translateX(-50%) scale(1.1) translateY(-2px); }
+  60%  { opacity: 0.8; transform: translateX(-50%) scale(1)   translateY(-6px); }
+  100% { opacity: 0;   transform: translateX(-50%) scale(0.8) translateY(-10px); }
+}
+
+/* ─── tool_bash >_ エフェクト ─────────────────────────────────── */
+.mascot-container .tool-bash-symbol {
+  position: absolute;
+  bottom: 56px;
+  left: 50%;
+  font-size: 13px;
+  font-family: monospace;
+  color: #a0ffa0;
+  text-shadow: 0 0 4px rgba(120, 255, 120, 0.6);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 11;
+  animation: tool-bash-pop 1.4s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes tool-bash-pop {
+  0%   { opacity: 0;   transform: translateX(-50%) scale(0.5) translateY(4px); }
+  25%  { opacity: 1;   transform: translateX(-50%) scale(1.1) translateY(-2px); }
+  60%  { opacity: 0.8; transform: translateX(-50%) scale(1)   translateY(-6px); }
+  100% { opacity: 0;   transform: translateX(-50%) scale(0.8) translateY(-10px); }
+}
+
+/* ─── tool_web 🌐 点滅エフェクト ─────────────────────────────── */
+.mascot-container .tool-web-symbol {
+  position: absolute;
+  bottom: 56px;
+  left: 50%;
+  font-size: 14px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 11;
+  animation: tool-web-pop 1.2s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes tool-web-pop {
+  0%   { opacity: 0;   transform: translateX(-50%) scale(0.5) translateY(4px); }
+  25%  { opacity: 1;   transform: translateX(-50%) scale(1.1) translateY(-2px); }
+  60%  { opacity: 0.8; transform: translateX(-50%) scale(1)   translateY(-6px); }
+  100% { opacity: 0;   transform: translateX(-50%) scale(0.8) translateY(-10px); }
+}
+
+/* ─── tool_skill ✨ エフェクト (tool_read の ✦ と差別化) ─────── */
+.mascot-container .tool-skill-symbol {
+  position: absolute;
+  bottom: 56px;
+  left: 50%;
+  font-size: 14px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 11;
+  animation: tool-skill-pop 1.0s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes tool-skill-pop {
+  0%   { opacity: 0;   transform: translateX(-50%) scale(0.5) translateY(4px); }
+  25%  { opacity: 1;   transform: translateX(-50%) scale(1.1) translateY(-2px); }
+  60%  { opacity: 0.8; transform: translateX(-50%) scale(1)   translateY(-6px); }
+  100% { opacity: 0;   transform: translateX(-50%) scale(0.8) translateY(-10px); }
+}
+
+/* ─── tool_other ◯ エフェクト (汎用ドット) ───────────────────── */
+.mascot-container .tool-other-symbol {
+  position: absolute;
+  bottom: 56px;
+  left: 50%;
+  font-size: 14px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 11;
+  animation: tool-other-pop 1.5s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes tool-other-pop {
+  0%   { opacity: 0;   transform: translateX(-50%) scale(0.5) translateY(4px); }
+  25%  { opacity: 1;   transform: translateX(-50%) scale(1.1) translateY(-2px); }
+  60%  { opacity: 0.8; transform: translateX(-50%) scale(1)   translateY(-6px); }
+  100% { opacity: 0;   transform: translateX(-50%) scale(0.8) translateY(-10px); }
+}
+
+/* ─── permission 「？」マーク ─────────────────────────────────── */
+.mascot-container .permission-mark {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffd84a;
+  text-shadow: 0 0 6px rgba(255, 216, 74, 0.8);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 12;
+  animation: permission-mark-pop 0.6s ease-out forwards;
+}
+
+@keyframes permission-mark-pop {
+  0%   { opacity: 0;   transform: translateX(-50%) scale(0.3) translateY(8px); }
+  40%  { opacity: 1;   transform: translateX(-50%) scale(1.2) translateY(-4px); }
+  100% { opacity: 1;   transform: translateX(-50%) scale(1)   translateY(0); }
+}
+
+/* ─── error 💧汗マーク ────────────────────────────────────────── */
+.mascot-container .error-sweat {
+  position: absolute;
+  bottom: 56px;
+  left: 50%;
+  font-size: 16px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(calc(-50% + var(--px, 8px)), 0);
+  animation: error-sweat-rise 1.2s ease-out forwards;
+  z-index: 11;
+  will-change: transform, opacity;
+}
+
+@keyframes error-sweat-rise {
+  0%   { opacity: 0;   transform: translate(calc(-50% + var(--px, 8px)), 4px)   scale(0.5); }
+  30%  { opacity: 1;   transform: translate(calc(-50% + var(--px, 8px)), -6px)  scale(1.1); }
+  70%  { opacity: 0.8; transform: translate(calc(-50% + var(--px, 8px)), -18px) scale(1); }
+  100% { opacity: 0;   transform: translate(calc(-50% + var(--px, 8px)), -30px) scale(0.9); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * §VFX-3 idle レアモーション (data-rare-motion 属性で発火)
+ * JS の _fireRareMotion() が el.dataset.rareMotion をセットする。
+ * transform-origin: bottom center 必須
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* --- yawn (あくび): scaleY + scaleX でパクっと ──────────────── */
+.mascot-container[data-rare-motion="yawn"] .parent-mascot {
+  animation: rare-yawn 1.5s ease-in-out forwards;
+  transform-origin: bottom center;
+}
+
+@keyframes rare-yawn {
+  0%      { transform: translateX(-50%) scaleY(1)    scaleX(1); }
+  20%     { transform: translateX(-50%) scaleY(1.04) scaleX(0.97); }
+  40%     { transform: translateX(-50%) scaleY(0.96) scaleX(1.04); }
+  75%     { transform: translateX(-50%) scaleY(1.03) scaleX(0.98); }
+  100%    { transform: translateX(-50%) scaleY(1)    scaleX(1); }
+}
+
+/* --- stretch (伸び): 頭上方向に伸びる ──────────────────────── */
+.mascot-container[data-rare-motion="stretch"] .parent-mascot {
+  animation: rare-stretch 1.4s ease-in-out forwards;
+  transform-origin: bottom center;
+}
+
+@keyframes rare-stretch {
+  0%   { transform: translateX(-50%) scaleY(1)    translateY(0); }
+  30%  { transform: translateX(-50%) scaleY(1.08) translateY(-4px); }
+  60%  { transform: translateX(-50%) scaleY(1.05) translateY(-2px); }
+  100% { transform: translateX(-50%) scaleY(1)    translateY(0); }
+}
+
+/* --- tail-wag (しっぽ振り): 左右 rotate ────────────────────── */
+.mascot-container[data-rare-motion="tail-wag"] .parent-mascot {
+  animation: rare-tailwag 1.5s ease-in-out forwards;
+  transform-origin: bottom center;
+}
+
+@keyframes rare-tailwag {
+  0%,100% { transform: translateX(-50%) rotate(0deg); }
+  15%     { transform: translateX(-50%) rotate(-8deg); }
+  35%     { transform: translateX(-50%) rotate(8deg); }
+  55%     { transform: translateX(-50%) rotate(-5deg); }
+  75%     { transform: translateX(-50%) rotate(5deg); }
+  90%     { transform: translateX(-50%) rotate(-2deg); }
+}
+
+/* --- ear-twitch (耳ピク): scaleX 微振動 ────────────────────── */
+.mascot-container[data-rare-motion="ear-twitch"] .parent-mascot {
+  animation: rare-eartwitch 1.0s ease-in-out forwards;
+  transform-origin: bottom center;
+}
+
+@keyframes rare-eartwitch {
+  0%,100% { transform: translateX(-50%) scaleX(1); }
+  20%     { transform: translateX(-50%) scaleX(1.05); }
+  40%     { transform: translateX(-50%) scaleX(0.97); }
+  60%     { transform: translateX(-50%) scaleX(1.04); }
+  80%     { transform: translateX(-50%) scaleX(0.98); }
+}
+
+/* --- head-tilt (見回し): 左→右 rotate ──────────────────────── */
+.mascot-container[data-rare-motion="head-tilt"] .parent-mascot {
+  animation: rare-headtilt 2.0s ease-in-out forwards;
+  transform-origin: bottom center;
+}
+
+@keyframes rare-headtilt {
+  0%   { transform: translateX(-50%) rotate(0deg); }
+  20%  { transform: translateX(-50%) rotate(-10deg); }
+  50%  { transform: translateX(-50%) rotate(10deg); }
+  80%  { transform: translateX(-50%) rotate(-4deg); }
+  100% { transform: translateX(-50%) rotate(0deg); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * §5.10 Permission Bridge — マスコット左右独立円形ボタン ()
+ *
+ * .permission-side-btn--allow : マスコット左 (いいよ / 緑 #4CAF50)
+ * .permission-side-btn--deny : マスコット右 (やめて / 赤 #D32F2F / WCAG AA)
+ * .permission-queue-badge : 右上 φ12px バッジ (queue 件数)
+ * .permission-bubble-text : 吹き出し本文 span
+ * .permission-bubble-suffix : 吹き出し suffix span (queue 残件数)
+ * .permission-firstrun-tooltip : 初回限定 3 秒 tooltip
+ *
+ * §5.10.5 必須遵守:
+ * - transform プロパティ使用禁止 (opacity 固着事例の根本原因対策)
+ * - animation: permission-btn-in 0.25s ease forwards の forwards 必須
+ * - @keyframes 終端は opacity: 1 を必ず明示
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* ─── 円形ボタン共通 ────────────────────────────────────────── */
+.mascot-container .permission-side-btn {
+  position: absolute;
+  bottom: 0;
+  width: 37px;
+  height: 37px;
+  border-radius: 50%;
+  border: none;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Noto Sans JP', 'Meiryo', sans-serif;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 30;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.6);
+ /* Bug1 fix: CSS animation は Electron 非フォーカス透過ウィンドウで throttle されて
+ * running のまま停止し opacity:0 に固着する。animation を削除し JS 側 rAF で制御する。
+ * (§5.10.5 transform 禁止ルールは維持) */
+  opacity: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0px;
+  line-height: 1.05;
+  color: #fff;
+  transition: opacity 0.12s ease, box-shadow 0.12s ease;
+}
+
+.mascot-container .permission-side-btn .psb-icon {
+  font-size: 13px;
+  font-weight: 900;
+  display: block;
+}
+
+.mascot-container .permission-side-btn .psb-label {
+  font-size: 8px;
+  display: block;
+}
+
+.mascot-container .permission-side-btn:hover {
+  opacity: 0.88;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.7);
+}
+
+/* ─── allow (緑: #4CAF50 → #43A047) ────────────────────────── */
+/* bottom: 0 = マスコット足元に揃え、bubble (bottom: 49+) と縦方向で完全分離。
+ * ボタン縦範囲は 0-37px、bubble は 49px 以上から上方向なので重ならない。 */
+.mascot-container .permission-side-btn--allow {
+  left: calc(50% - 80px);
+  bottom: 0;
+  background: linear-gradient(180deg, #4CAF50 0%, #43A047 100%);
+}
+
+/* ─── deny (赤: #D32F2F → #B71C1C / WCAG AA 5.25:1) ────────── */
+.mascot-container .permission-side-btn--deny {
+  left: calc(50% + 43px);
+  bottom: 0;
+  background: linear-gradient(180deg, #D32F2F 0%, #B71C1C 100%);
+}
+
+/* ─── クリック面積拡大 (+8px) 見た目は維持 ─────────────────── */
+.mascot-container .permission-side-btn::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+}
+
+/* ─── 登場アニメ (§5.10.5: forwards 必須 / 終端 opacity:1 必須) ─ */
+@keyframes permission-btn-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── dismiss フェードアウト ────────────────────────────────── */
+/* deny: 250ms（やや余韻あり）*/
+.mascot-container .permission-btn-fadeout {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+/* allow: 150ms（素早く消えて吹き出しに視線誘導）*/
+.mascot-container .permission-btn-fadeout-allow {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+/* ─── 右上 queue バッジ (§5.10.6 / §5.10.3) ────────────────── */
+.mascot-container .permission-queue-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #FF6B35;
+  color: #FFFFFF;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: 'Noto Sans JP', 'Meiryo', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 35;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* ─── 吹き出し 2 span 構造 (§5.10.6.1) ─────────────────────── */
+.mascot-container .bubble .permission-bubble-text {
+  display: inline;
+}
+
+.mascot-container .bubble .permission-bubble-suffix {
+  display: block;
+  font-size: 0.85em;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+/* ─── first-run hint tooltip (§5.10.3 / transform 禁止) ────── */
+.mascot-container .permission-firstrun-tooltip {
+  position: absolute;
+  bottom: 62px;
+  left: 50%;
+  margin-left: -44px;
+  width: 88px;
+  background: rgba(30, 30, 50, 0.92);
+  color: #e8e8f0;
+  font-size: 10px;
+  font-family: 'Noto Sans JP', 'Meiryo', sans-serif;
+  border-radius: 6px;
+  padding: 4px 6px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 40;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.mascot-container .permission-firstrun-tooltip.visible {
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * §5.6.7 SubagentStop ✨ パーティクル演出
+ * 仕様: 親くろたん頭上にパーティクル 4 個 (merge 時最大 6 個) が
+ * 上方向 ±30° に放射状ポップ (約 500ms)。
+ * DOM プール: MascotElement.sparklePool[] に 6 要素を予約して再利用。
+ * 毎フレーム DOM 生成は避ける (パフォーマンス対策)。
+ * 現状は CSS radial-gradient で描画。専用 PNG (pixel/fx/subagent_done_sparkle.png
+ * および sd/fx/subagent_done_sparkle.png) を用意する場合は background-image を有効化し
+ * radial-gradient を削除する。
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* ─── .subagent-sparkle 基本スタイル ─────────────────────────── */
+.mascot-container .subagent-sparkle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+ /* 専用 PNG を使う場合はコメントアウトを解除し、下の radial-gradient 行を削除 */
+ /* CSS radial-gradient で金色 sparkle を描画 */
+  background: radial-gradient(circle, #FFF8A0 0%, #F0E040 40%, transparent 75%);
+
+  pointer-events: none;
+  display: none;  /* プール待機中は非表示 */
+  z-index: 13;
+  transform-origin: center center;
+  will-change: transform, opacity;
+}
+
+/* SD アートスタイル用予約 (将来 SD 版アセットで差し替える) */
+/* #mascot-stage[data-art-style="sd"] .mascot-container .subagent-sparkle {
+  background-image: url('../../assets/sd/fx/subagent_done_sparkle.png');
+  background: none;
+  background-size: 12px 12px;
+  image-rendering: auto;
+} */
+
+/* ─── アクティブ時: display:block + keyframes 発火 ──────────── */
+.mascot-container .subagent-sparkle.active {
+  display: block;
+ /*
+ * CSS 変数 (JS から inline style で個別設定):
+ * --tx : X 方向最終変位 (px)。JS で cos(angle) * distance を計算して渡す
+ * --ty : Y 方向最終変位 (px)。JS で sin(angle) * distance を計算して渡す
+ * 上方向 (270deg) → ty = -distance (負 = 上移動)
+ *
+ * 例: angle=255deg, distance=28px
+ * --tx = Math.round(cos(255° in rad) * 28) → ≈ -7
+ * --ty = Math.round(sin(255° in rad) * 28) → ≈ -27
+ */
+  animation: sparkle-radiate 500ms ease-out forwards;
+}
+
+/*
+ * @keyframes sparkle-radiate
+ *
+ * 0% → opacity 0, 元位置 (center)
+ * 30% → opacity 1, ピーク (--tx / --ty の位置へ移動)
+ * 100% → opacity 0, さらに 1.4 倍伸びてフェード
+ *
+ * left:50% / top の位置調整は JS 側で行い、
+ * keyframe は translate(-50%, -50%) で中心基準を維持する。
+ */
+@keyframes sparkle-radiate {
+  0% {
+    opacity: 0;
+    transform: translate(calc(-50% + 0px), calc(-50% + 0px)) scale(0.3);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--tx, 0px)), calc(-50% + var(--ty, -28px))) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(
+      calc(-50% + calc(var(--tx, 0px) * 1.4)),
+      calc(-50% + calc(var(--ty, -28px) * 1.4))
+    ) scale(0.7);
+  }
+}
+
+/* §5.9 凍結 - で再検討 */
+/* 以下の §5.9 コンテキスト連動 sleepy/drowsy/yawn/stretch 実装は
+ * の見た目変更許可なしに実装されたため凍結。
+ * アセット (drowsy.png / sleepy.png 等) は削除しない。
+ * CSS セレクタ群は残さず削除し、data-context-level 属性も付与しない。 */
+
+/* ═══════════════════════════════════════════════════════════════
+ * §5.12 マスコット登場モーション (Entry Animation / 4 種)
+ *
+ * 適用対象: 親 .mascot-container のみ (子くろたん child-popin は §5.4 で独立)
+ * 適用方法: JS が DOM append 直後に entry-anim-[a|b|c|d] を追加。
+ * animationend イベントで class を自動削除する (JS 担当)。
+ *
+ * transform 競合設計:
+ * .mascot-container の位置は CSS 変数 --mx / --my を使った
+ * translate3d で管理されている (mascot-fadein @keyframes 参照)。
+ * entry-anim-* クラス付与中は mascot-fadein を上書きし、
+ * entry-anim 専用 @keyframes で transform + opacity を制御する。
+ * 各 keyframes の 100% 終端は translate3d(0,0,0) + opacity:1 に
+ * 統一する (JS が animationend で class を remove した直後、
+ * 親コンテナの絶対座標は left/top で確定済みのため問題なし)。
+ *
+ * 内部の .parent-mascot (breathing / state アニメ) は
+ * translateX(-50%) ベースの独立 transform を持つため競合しない
+ * (§5.12.8.1 CSS レイヤー分離)。
+ *
+ * 注意: forwards fill は使用しない。100% 終端 = idle 通常状態
+ * と一致させ、JS class remove 後にちらつきが出ないようにする。
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* ─── entry-anim-* 共通: mascot-fadein を上書き ─────────────── */
+/* specificity を .mascot-container 単体より高くして animation を差替える */
+.mascot-container.entry-anim-a,
+.mascot-container.entry-anim-b,
+.mascot-container.entry-anim-c,
+.mascot-container.entry-anim-d,
+.mascot-container.entry-anim-e {
+ /* mascot-fadein (0.3s) を無効化し entry-anim 専用 animation に切替 */
+  animation: none;
+}
+
+/* ─── A. ぴょこん (0.40s / ease-out) ────────────────────────── */
+/*
+ * 0% : 画面下からジャンプ (translateY +80px, opacity 0)
+ * ※ タスク仕様の translateY(120%) は小サイズマスコット (43-52px) では
+ * 体感がほぼ同じだが px 指定の方が predictable なため §5.12.3 確定値
+ * 「translateY(+80px)」を採用する
+ * 50% : 着地 (translateY 0, opacity 1)
+ * 65% : 着地スクワッシュ (scaleY 0.85 + scaleX 1.10 / 縦つぶれ)
+ * 100%: ぽよん戻し (scale 1.0)
+ *
+ * transform-origin: bottom center は .mascot-container の position:absolute
+ * に対して効くため、足元基準でスクワッシュが機能する。
+ */
+.mascot-container.entry-anim-a {
+  animation: entry-A-pyokon 0.40s ease-out;
+  transform-origin: bottom center;
+}
+
+@keyframes entry-A-pyokon {
+  0%   { opacity: 0; transform: translate3d(var(--mx, 0px), calc(var(--my, 0px) + 80px), 0) scaleY(1) scaleX(1); }
+  50%  { opacity: 1; transform: translate3d(var(--mx, 0px), var(--my, 0px), 0) scaleY(1) scaleX(1); }
+  65%  { opacity: 1; transform: translate3d(var(--mx, 0px), var(--my, 0px), 0) scaleY(0.85) scaleX(1.10); }
+  100% { opacity: 1; transform: translate3d(var(--mx, 0px), var(--my, 0px), 0) scaleY(1) scaleX(1); }
+}
+
+/* ─── B. ふわっと (1.20s / cubic-bezier 羽根落下) ────────────── */
+/*
+ * フィードバック対応: C (ドスン) との差別化強化。
+ * 「上空 -20px から羽根のようにゆっくり舞い降りる」イメージ。
+ * duration 0.60s → 1.20s に倍増。振幅 -4px → -20px に拡大。
+ *
+ * 0% : opacity 0, translateY(-20px) (上空から出現)
+ * 40% : opacity 0.7, translateY(-8px) (ゆっくり降下中)
+ * 60% : opacity 1, translateY(-4px) (着地直前)
+ * 80% : opacity 1, translateY(-1px) (微小バウンド)
+ * 100%: opacity 1, translateY(0) (着地完了)
+ */
+.mascot-container.entry-anim-b {
+  animation: entry-B-fuwatto 1.20s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@keyframes entry-B-fuwatto {
+  0%   { opacity: 0;   transform: translate3d(var(--mx, 0px), calc(var(--my, 0px) + -20px), 0); }
+  40%  { opacity: 0.7; transform: translate3d(var(--mx, 0px), calc(var(--my, 0px) + -8px), 0); }
+  60%  { opacity: 1;   transform: translate3d(var(--mx, 0px), calc(var(--my, 0px) + -4px), 0); }
+  80%  { opacity: 1;   transform: translate3d(var(--mx, 0px), calc(var(--my, 0px) + -1px), 0); }
+  100% { opacity: 1;   transform: translate3d(var(--mx, 0px), var(--my, 0px), 0); }
+}
+
+/* ─── C. ドスン落下 (0.80s / cubic-bezier overshoot) ────────── */
+/*
+ * 仕様 §5.12.3 確定値:
+ * 0-55% : translateY(-200px) → translateY(0) / cubic-bezier(0.5,0,0.5,1.4) overshoot
+ * 55-65% : translateY(0 → -8px → 0) バウンド
+ * 65-100%: rotate(0 → -5deg → +5deg → 0) 頭かしげ
+ * transform-origin: bottom center (足元基準 / §5.12.13 案 b)
+ *
+ * keyframes 内で timing-function を per-keyframe で切り替えることで
+ * cubic-bezier を落下フェーズのみに適用する。
+ * 注意: 頭かしげ (rotate) は §5.12.8.1 の通り、登場モーション完了まで
+ * 首かしげ状態で見える (仕様・許容)。
+ */
+.mascot-container.entry-anim-c {
+  animation: entry-C-dosun 0.80s linear;
+  transform-origin: bottom center;
+}
+
+@keyframes entry-C-dosun {
+  0%   { opacity: 0; transform: translate3d(var(--mx, 0px), calc(var(--my, 0px) + -200px), 0) rotate(0deg); animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1.4); }
+  55%  { opacity: 1; transform: translate3d(var(--mx, 0px), var(--my, 0px), 0) rotate(0deg); animation-timing-function: ease-out; }
+  60%  { opacity: 1; transform: translate3d(var(--mx, 0px), calc(var(--my, 0px) + -8px), 0) rotate(0deg); animation-timing-function: ease-in; }
+  65%  { opacity: 1; transform: translate3d(var(--mx, 0px), var(--my, 0px), 0) rotate(0deg); animation-timing-function: ease-in-out; }
+  75%  { opacity: 1; transform: translate3d(var(--mx, 0px), var(--my, 0px), 0) rotate(-5deg); }
+  87%  { opacity: 1; transform: translate3d(var(--mx, 0px), var(--my, 0px), 0) rotate(5deg); }
+  100% { opacity: 1; transform: translate3d(var(--mx, 0px), var(--my, 0px), 0) rotate(0deg); }
+}
+
+/* ─── D. 波打ち・ウェーブ (A と同じ keyframe / delay を CSS 変数で受ける) ── */
+/*
+ * 仕様 §5.12.3: D は A モーション (ぴょこん 0.40s) + animation-delay を
+ * --entry-anim-delay CSS 変数で受け取る。
+ * HTML 側: style="--entry-anim-delay: 0ms" (i=0), "200ms" (i=2) 等
+ * JS 側 : lead-programmer が x 座標昇順で i に 0〜(N-1) を割り当てる
+ *
+ * D クラスは entry-A-pyokon と同じ @keyframes を参照する
+ * (keyframes 定義を共有し、クラスで delay だけ切り替える設計)。
+ */
+.mascot-container.entry-anim-d {
+  animation: entry-A-pyokon 0.40s ease-out;
+  animation-delay: var(--entry-anim-delay, 0ms);
+  transform-origin: bottom center;
+ /* delay 中も opacity:0 を維持する (fill-mode: both で delay 前を初期状態に保つ)
+ * ただし forwards は使わない (仕様設計上の注意通り)。
+ * both = backwards (delay 中は 0% 状態) + forwards (100% 終端維持) だが、
+ * JS が animationend で class を remove するため forwards 効果は一瞬のみ。*/
+  animation-fill-mode: both;
+}
+
+/* ─── E. ホロライブ全体ライブ風 (4.0s) ─────────────────────── */
+/*
+ * タイミング:
+ * 0.0 - 0.5s スポットライト点灯 (snap 出現 + 維持)
+ * 0.5 - 0.7s ロゴ snap 出現
+ * 0.7 - 2.5s ロゴ回転 + キラキラ粒子
+ * 2.5 - 2.7s ロゴ snap 縮小 → 消滅
+ * 2.7 - 2.8s 円形波動 + kurotan snap 出現
+ * 2.8 - 4.0s idle 復帰 (スポットライト・波動フェードアウト)
+ *
+ * .mascot-container は kurotan 本体。
+ * entry-E-mascot-appear で kurotan 本体のアニメを制御する。
+ * .entry-e-spotlight / .entry-e-logo / .entry-e-ring は
+ * JS が entry-anim-e クラス付与時に display:none を解除し、
+ * animationend 後に display:none に戻す。
+ *
+ * transform 競合: --mx / --my を translate3d に含める (既存規約準拠)。
+ */
+
+/* kurotan 本体 (4s アニメ) */
+/* .mascot-container の opacity は常に 1 を維持する。
+ * 子要素 (.entry-e-spotlight / .entry-e-logo / .entry-e-ring) が
+ * 親の opacity:0 で巻き込まれて透明化されるバグを防ぐ。
+ * opacity 制御は .parent-mascot (entry-E-mascot-body-appear) に移管。
+ */
+.mascot-container.entry-anim-e {
+  animation: entry-E-mascot-appear 4.0s linear forwards;
+}
+
+@keyframes entry-E-mascot-appear {
+ /* transform のみ。opacity は削除 (.parent-mascot 側で制御) */
+  0%    { transform: translate3d(var(--mx, 0px), var(--my, 0px), 0); }
+  100%  { transform: translate3d(var(--mx, 0px), var(--my, 0px), 0); }
+}
+
+/* kurotan 本体の opacity / snap-scale を .parent-mascot に切り出し */
+.mascot-container.entry-anim-e .parent-mascot {
+  animation: entry-E-mascot-body-appear 4.0s linear forwards;
+}
+
+@keyframes entry-E-mascot-body-appear {
+ /* 0 - 2.7s: kurotan は非表示 (上空 -30px に待機) */
+  0%    { opacity: 0; transform: translateX(-50%) translateY(-30px) scale(1.0); }
+  67.4% { opacity: 0; transform: translateX(-50%) translateY(-30px) scale(1.0); }
+ /* 2.7s: 上空 -30px に snap 出現 */
+  67.5% { opacity: 1; transform: translateX(-50%) translateY(-30px) scale(1.0); }
+ /* 2.75s: 落下開始 (ease-in 風 — わずかに動き出し) */
+  68.75% { opacity: 1; transform: translateX(-50%) translateY(-25px) scale(1.0); animation-timing-function: ease-in; }
+ /* 3.0s: 足元着地 */
+  75%    { opacity: 1; transform: translateX(-50%) translateY(0px) scale(1.0); }
+ /* 3.0s - 3.1s: 着地スクワッシュ (縦つぶれ) */
+  77.5%  { opacity: 1; transform: translateX(-50%) translateY(0px) scaleY(0.85) scaleX(1.10); }
+ /* 3.1s - 3.2s: バウンド戻し */
+  80%    { opacity: 1; transform: translateX(-50%) translateY(0px) scale(1.0); }
+ /* 3.2 - 4.0s: idle 維持 */
+  100%   { opacity: 1; transform: translateX(-50%) translateY(0px) scale(1.0); }
+}
+
+/* スポットライト (光柱) */
+.mascot-container.entry-anim-e .entry-e-spotlight {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%,
+    rgba(255, 240, 180, 0.95) 0%,
+    rgba(255, 220, 100, 0.70) 30%,
+    rgba(255, 200, 60, 0.40) 60%,
+    transparent 100%);
+  box-shadow:
+    0 0 20px 10px rgba(255, 240, 180, 0.6),
+    0 0 40px 20px rgba(255, 200, 60, 0.3);
+  animation: entry-E-spotlight 4.0s linear forwards;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes entry-E-spotlight {
+ /* 0s: snap 出現 */
+  0%    { opacity: 0; }
+  0.1%  { opacity: 1; }
+ /* 0.0 - 2.8s: 維持 */
+  69.9% { opacity: 1; }
+ /* 2.8 - 4.0s: フェードアウト */
+  100%  { opacity: 0; }
+}
+
+/* Anthropic sunburst ロゴ (放射光線 + "A") */
+.mascot-container.entry-anim-e .entry-e-logo {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 44px;
+  animation: entry-E-logo-appear-rotate-shrink 4.0s linear forwards;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ロゴ内部: 放射光線 (CSS box-shadow テクニック + A 文字) */
+.mascot-container.entry-anim-e .entry-e-logo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%,
+ #fff9e6 0%,
+ #ffd866 40%,
+ #ffb300 70%,
+    transparent 100%);
+ /* 放射光線 12 本: box-shadow で放射状に表現 */
+  box-shadow:
+    0 -20px 0 2px rgba(255, 200, 50, 0.9),
+    14px -14px 0 2px rgba(255, 200, 50, 0.9),
+    20px 0 0 2px rgba(255, 200, 50, 0.9),
+    14px 14px 0 2px rgba(255, 200, 50, 0.9),
+    0 20px 0 2px rgba(255, 200, 50, 0.9),
+    -14px 14px 0 2px rgba(255, 200, 50, 0.9),
+    -20px 0 0 2px rgba(255, 200, 50, 0.9),
+    -14px -14px 0 2px rgba(255, 200, 50, 0.9),
+    10px -18px 0 1px rgba(255, 210, 80, 0.7),
+    18px -10px 0 1px rgba(255, 210, 80, 0.7),
+    18px 10px 0 1px rgba(255, 210, 80, 0.7),
+    10px 18px 0 1px rgba(255, 210, 80, 0.7),
+    -10px 18px 0 1px rgba(255, 210, 80, 0.7),
+    -18px 10px 0 1px rgba(255, 210, 80, 0.7),
+    -18px -10px 0 1px rgba(255, 210, 80, 0.7),
+    -10px -18px 0 1px rgba(255, 210, 80, 0.7);
+}
+
+/* "A" 文字 */
+.mascot-container.entry-anim-e .entry-e-logo::after {
+  content: "A";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 900;
+  color: #7a3800;
+  font-family: "Segoe UI", Arial, sans-serif;
+  line-height: 1;
+  text-align: center;
+ /* flex は ::after では直接効かないため以下で代用 */
+  padding-top: 13px;
+  padding-left: 1px;
+}
+
+@keyframes entry-E-logo-appear-rotate-shrink {
+ /* 0 - 0.5s: 非表示 */
+  0%    { opacity: 0; transform: translateX(-50%) scale(0) rotate(0deg); }
+  12.4% { opacity: 0; transform: translateX(-50%) scale(0) rotate(0deg); }
+ /* 0.5 - 0.7s: snap 出現 (scale 0 → 1.2 → 1.0) */
+  12.5% { opacity: 1; transform: translateX(-50%) scale(1.2) rotate(0deg); }
+  17.5% { opacity: 1; transform: translateX(-50%) scale(1.0) rotate(0deg); }
+ /* 0.7 - 2.5s: 回転しながら滑らかに縮小 (scale 1.0 → 0.2, rotate 0 → 720deg) */
+  62.4% { opacity: 1; transform: translateX(-50%) scale(0.2) rotate(720deg); }
+ /* 2.5 - 2.7s: 完全消滅 (scale 0.2 → 0, rotate → 800deg) */
+  62.5% { opacity: 1; transform: translateX(-50%) scale(0.2) rotate(720deg); }
+  67.4% { opacity: 0; transform: translateX(-50%) scale(0) rotate(800deg); }
+ /* 2.7s 以降: 非表示維持 */
+  67.5% { opacity: 0; transform: translateX(-50%) scale(0) rotate(800deg); }
+  100%  { opacity: 0; transform: translateX(-50%) scale(0) rotate(800deg); }
+}
+
+/* キラキラ粒子 (0.7 - 2.8s の間に表示) */
+/* CSS animation で 6 つの擬似粒子を entry-e-logo の外に配置 */
+/* 実際の粒子は ::before / ::after の代わりに entry-e-spotlight の子 div として扱う */
+/* シンプルに entry-e-logo に重ねた sparkle 要素として実現 */
+.mascot-container.entry-anim-e .entry-e-logo {
+ /* ロゴ自体のアニメは上記の通り。粒子は filter で表現 */
+  filter: drop-shadow(0 0 6px rgba(255, 220, 80, 0.9))
+          drop-shadow(0 0 12px rgba(255, 180, 60, 0.6));
+}
+
+/* 円形波動リング */
+.mascot-container.entry-anim-e .entry-e-ring {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%) translateY(50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 3px solid rgba(180, 220, 255, 0.9);
+  box-shadow:
+    0 0 8px 2px rgba(180, 220, 255, 0.5),
+    inset 0 0 4px rgba(180, 220, 255, 0.3);
+  animation: entry-E-ring 4.0s linear forwards;
+  pointer-events: none;
+  z-index: 3;
+}
+
+@keyframes entry-E-ring {
+ /* 0 - 3.1s: 非表示 (着地待ち) */
+  0%    { opacity: 0; width: 10px; height: 10px; }
+  77.4% { opacity: 0; width: 10px; height: 10px; }
+ /* 3.1s: リング拡散開始 ("じゃーん!") */
+  77.5% { opacity: 1; width: 10px; height: 10px; }
+ /* 3.5s: 拡散ピーク */
+  87.5% { opacity: 0.8; width: 130px; height: 130px; border-color: rgba(180, 220, 255, 0.5); }
+ /* 3.8s: 半透明 */
+  95%   { opacity: 0; width: 150px; height: 150px; }
+ /* 4.0s: 完全フェードアウト */
+  100%  { opacity: 0; width: 150px; height: 150px; }
+}
+
+/* ─── prefers-reduced-motion 対応 ──────────────────────────── */
+/*
+ * OS の「アニメーション削減」設定が ON の場合、全 entry-anim-* を
+ * 0.2s フェードインのみに差し替える。
+ *
+ * 注意: §5.12.10 では JS 側の matchMedia 判定で
+ * disableEntryAnimationForReducedMotion=true (default) のとき
+ * entry-anim クラス自体を付与しない (= "off" 相当) という設計が
+ * primary。本 CSS @media は JS が matchMedia を無視した場合の
+ * CSS レベルのフォールバックとして機能する (二重安全策)。
+ */
+@media (prefers-reduced-motion: reduce) {
+  .mascot-container.entry-anim-a,
+  .mascot-container.entry-anim-b,
+  .mascot-container.entry-anim-c,
+  .mascot-container.entry-anim-d,
+  .mascot-container.entry-anim-e {
+    animation: entry-anim-reduced 0.2s ease forwards !important;
+    animation-delay: 0ms !important;
+  }
+
+  .mascot-container.entry-anim-e .entry-e-spotlight,
+  .mascot-container.entry-anim-e .entry-e-logo,
+  .mascot-container.entry-anim-e .entry-e-ring {
+    display: none !important;
+  }
+
+  @keyframes entry-anim-reduced {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+}
+
+/* ─── KORONE イースターエッグ (§5.7.2) ──────────────────────────
+ * SD モードのみ有効。data-easter-egg="korone" 付与で全状態スプライトを上書き。
+ * pixel モードは意図的に CSS ルールなし (EE 発火しても見た目変わらない仕様)。
+ * リセット: kurotan 再起動でグローバル flag が消え dataset も消える (in-memory only)。
+ * ─────────────────────────────────────────────────────────────── */
+
+/* 親スプライト: 12 状態すべてを korone.png で上書き */
+#mascot-stage[data-art-style="sd"] .mascot-container[data-easter-egg="korone"] .sprite {
+  background-image: url('../../assets/sd/korone.png') !important;
+}
+
+/* 子スプライト: 基底 + 6 ツール種別すべてを koronesuki.png で上書き */
+#mascot-stage[data-art-style="sd"] .mascot-container[data-easter-egg="korone"] .child-mascot .child-sprite {
+  background-image: url('../../assets/sd/child/koronesuki.png') !important;
+}

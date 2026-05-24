@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>kurotan overlay</title>
+  <style>
+    :root {
+      color-scheme: dark;
+ /* くろたん吹き出しと同じ変数 */
+      --bubble-bg: rgba(30, 30, 50, 0.85);
+      --bubble-text-color: #E8E8F0;
+      --bubble-font-family: 'Noto Sans JP', 'Meiryo', sans-serif;
+      --bubble-font-size: 12px;
+ /* 下地: 吹き出しより明度を落とした色 */
+      --bar-bg: rgba(18, 18, 32, 0.92);
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      font-family: 'Noto Sans JP', 'Meiryo', 'Yu Gothic UI', sans-serif;
+      user-select: none;
+      cursor: default;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      padding: 6px; /* リサイズ用エッジ余白 */
+      box-sizing: border-box;
+    }
+ #bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      align-items: center;
+      gap: 4px;
+      box-sizing: border-box;
+      padding: 6px 8px;
+      flex: 1 1 auto;
+      width: 100%;
+      background: var(--bar-bg);
+      color: var(--bubble-text-color);
+      font-family: var(--bubble-font-family);
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(4px);
+      cursor: move; /* バー背景はドラッグ用カーソル */
+    }
+    body.dialog-open #bar {
+      display: none;
+    }
+ #buttons {
+      display: contents;
+    }
+ /* リサイズハンドル: ウィンドウ端のエッジ余白 (body padding 6px) はカーソル変化用 */
+    .resize-edge {
+      position: fixed;
+      z-index: 200;
+      -webkit-app-region: no-drag;
+    }
+    .resize-edge.r-right  { top: 6px; right: 0; bottom: 6px; width: 6px; cursor: ew-resize; }
+    .resize-edge.r-left   { top: 6px; left: 0; bottom: 6px; width: 6px; cursor: ew-resize; }
+    .resize-edge.r-bottom { left: 6px; right: 6px; bottom: 0; height: 6px; cursor: ns-resize; }
+    .resize-edge.r-top    { left: 6px; right: 6px; top: 0; height: 6px; cursor: ns-resize; }
+    .resize-edge.r-br { right: 0; bottom: 0; width: 8px; height: 8px; cursor: nwse-resize; }
+    .resize-edge.r-bl { left: 0; bottom: 0; width: 8px; height: 8px; cursor: nesw-resize; }
+    .resize-edge.r-tr { right: 0; top: 0; width: 8px; height: 8px; cursor: nesw-resize; }
+    .resize-edge.r-tl { left: 0; top: 0; width: 8px; height: 8px; cursor: nwse-resize; }
+    .handle {
+      display: none; /* バー全体がドラッグ可になったので handle 不要 */
+    }
+    .btn {
+      flex: 0 0 auto;
+      min-width: 30px;
+      height: 24px;
+      padding: 0 8px;
+      border: none;
+      border-radius: 8px; /* 吹き出しと同じ */
+      background: var(--bubble-bg); /* 吹き出しと同じ */
+      color: var(--bubble-text-color);
+      font-size: var(--bubble-font-size);
+      font-family: var(--bubble-font-family);
+      font-weight: 500;
+      cursor: pointer;
+      transition: filter 0.15s ease, background 0.15s ease;
+    }
+    .btn:hover {
+      filter: brightness(1.25);
+    }
+    .btn:active {
+      filter: brightness(1.4);
+    }
+ /* + / × の文字色を暗めに (背景と馴染まないように) */
+    .btn.add {
+      color: #5BAA56; /* 元: #A6E3A1 から明度ダウン */
+    }
+    .btn.close-x {
+      color: #B86077; /* 元: #F38BA8 から明度ダウン */
+      min-width: 22px;
+      padding: 0 6px;
+    }
+    .btn.target {
+      color: #89B4FA; /* Catppuccin Blue */
+    }
+    .btn.target.has-target {
+      color: #F9E2AF; /* 設定済み: 黄色 */
+    }
+ /* カウントダウン全画面オーバーレイ (バーの誤クリック防止のため pointer-events:auto) */
+ #countdown {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.6);
+      color: #E8E8F0;
+      font-size: 28px;
+      font-weight: 700;
+      z-index: 300;
+      pointer-events: auto;
+    }
+ #countdown.show {
+      display: flex;
+    }
+    .toast {
+      position: fixed;
+      bottom: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 20, 30, 0.85);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .toast.show {
+      opacity: 1;
+    }
+ /* 編集ダイアログ (吹き出しトンマナ) */
+ #dialog-mask {
+      display: none;
+      flex: 1 1 auto;
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+ #dialog-mask.show {
+      display: flex;
+    }
+ #dialog {
+      background: rgba(30, 30, 50, 0.92);
+      border-radius: 8px;
+      padding: 12px 14px;
+      width: 280px;
+      color: #E8E8F0;
+      font-size: 12px;
+      font-family: inherit;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      pointer-events: auto;
+    }
+ #dialog h3 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #E8E8F0;
+    }
+ #dialog label {
+      display: block;
+      margin: 6px 0 3px;
+      opacity: 0.75;
+      font-size: 11px;
+    }
+ #dialog input {
+      width: 100%;
+      padding: 5px 8px;
+      border: 1px solid rgba(232, 232, 240, 0.2);
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.35);
+      color: #E8E8F0;
+      font-size: 12px;
+      font-family: inherit;
+      box-sizing: border-box;
+      outline: none;
+    }
+ #dialog input:focus {
+      border-color: rgba(232, 232, 240, 0.5);
+    }
+ #dialog .row {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+      justify-content: flex-end;
+    }
+ #dialog button {
+      padding: 5px 12px;
+      border: none;
+      border-radius: 4px;
+      background: rgba(232, 232, 240, 0.12);
+      color: #E8E8F0;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+    }
+ #dialog button:hover {
+      background: rgba(232, 232, 240, 0.22);
+    }
+ #dialog button.danger {
+      color: #F38BA8;
+    }
+ #dialog button.primary {
+      color: #A6E3A1;
+    }
+  </style>
+</head>
+<body>
+  <div class="resize-edge r-top" data-edge="top"></div>
+  <div class="resize-edge r-bottom" data-edge="bottom"></div>
+  <div class="resize-edge r-left" data-edge="left"></div>
+  <div class="resize-edge r-right" data-edge="right"></div>
+  <div class="resize-edge r-tl" data-edge="top,left"></div>
+  <div class="resize-edge r-tr" data-edge="top,right"></div>
+  <div class="resize-edge r-bl" data-edge="bottom,left"></div>
+  <div class="resize-edge r-br" data-edge="bottom,right"></div>
+  <div id="bar">
+    <div class="handle" title="ドラッグで移動">⋮⋮</div>
+    <div id="buttons"></div>
+    <button class="btn add" id="add-btn" title="ボタン追加">＋</button>
+    <button class="btn target" id="target-btn" title="送信前にフォーカスする座標を設定 (3秒カウント後にカーソル位置を記録)">🎯</button>
+    <button class="btn close-x" id="close-btn" title="閉じる">×</button>
+  </div>
+  <div class="toast" id="toast"></div>
+  <div id="countdown"></div>
+
+  <div id="dialog-mask">
+    <div id="dialog">
+      <h3 id="dialog-title">ボタン編集</h3>
+      <label>表示ラベル</label>
+      <input type="text" id="dlg-label" maxlength="16" />
+      <label>送信内容 (Enter は自動付与)</label>
+      <input type="text" id="dlg-text" maxlength="512" />
+      <div class="row">
+        <button id="dlg-delete" class="danger" style="margin-right: auto;">削除</button>
+        <button id="dlg-cancel">キャンセル</button>
+        <button id="dlg-ok" class="primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./index.js"></script>
+</body>
+</html>

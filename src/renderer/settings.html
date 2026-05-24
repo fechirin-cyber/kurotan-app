@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>くろたん 設定</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'">
+<style>
+ * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", sans-serif; }
+  html, body { width: 320px; height: 560px; overflow: hidden; background: #1a1a24; color: #e8e8f0; }
+  .window { width: 320px; height: 560px; background: #1a1a24; display: flex; flex-direction: column; overflow: hidden; }
+  .header { padding: 12px 14px; background: #22222e; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2a2a38; flex-shrink: 0; }
+  .title { font-size: 14px; font-weight: 600; }
+  .badge-unofficial { background: #c94b3a; color: #ffffff; font-size: 9px; padding: 3px 6px; border-radius: 3px; font-weight: 600; letter-spacing: 0.3px; }
+  .body { flex: 1; padding: 12px 14px; overflow-y: auto; font-size: 12px; }
+  .section { margin-bottom: 14px; }
+  .section-title { font-size: 10px; color: #9a9aa8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .row { display: flex; align-items: center; padding: 5px 0; gap: 8px; }
+  .row label { flex: 1; font-size: 12px; color: #e8e8f0; }
+  .muted { color: #6a6a78; }
+  input[type="range"] { width: 100%; accent-color: #c94b3a; cursor: pointer; }
+  .preset-btn { background: #2a2a38; color: #e8e8f0; border: 1px solid #3a3a48; padding: 3px 8px; font-size: 10px; border-radius: 3px; cursor: pointer; }
+  .preset-btn:hover { background: #3a3a48; }
+  .toggle { width: 32px; height: 18px; background: #2a2a38; border-radius: 9px; position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+  .toggle.on { background: #c94b3a; }
+  .toggle::after { content: ""; position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #e8e8f0; top: 2px; left: 2px; transition: left 0.2s; }
+  .toggle.on::after { left: 16px; }
+  .hooks-status { font-size: 11px; padding: 6px 8px; background: #0f3019; color: #5ada85; border-radius: 3px; margin-bottom: 6px; }
+  .hooks-status.error { background: #2a1010; color: #da5a5a; }
+  .hooks-status.running { background: #1a1a2a; color: #9a9aa8; }
+  .btn-primary { background: #c94b3a; color: #ffffff; border: none; padding: 6px 10px; font-size: 11px; border-radius: 3px; cursor: pointer; width: 100%; margin-bottom: 4px; }
+  .btn-primary:hover { background: #d85b4a; }
+  .btn-primary:disabled { background: #3a2a28; color: #7a5a58; cursor: not-allowed; }
+  .btn-secondary { background: #2a2a38; color: #e8e8f0; border: 1px solid #3a3a48; padding: 6px 10px; font-size: 11px; border-radius: 3px; cursor: pointer; width: 100%; }
+  .btn-secondary:hover { background: #3a3a48; }
+  .about { font-size: 11px; color: #9a9aa8; line-height: 1.5; }
+  .about strong { color: #e8e8f0; }
+  .about-unofficial { font-size: 10px; color: #c9a0a0; margin-top: 4px; }
+  .footer { padding: 8px 14px; background: #0f0f17; border-top: 1px solid #2a2a38; font-size: 10px; color: #9a9aa8; text-align: center; letter-spacing: 0.2px; flex-shrink: 0; }
+  input[type="color"] { width: 32px; height: 22px; border: 1px solid #3a3a48; background: #2a2a38; padding: 1px; border-radius: 3px; cursor: pointer; flex-shrink: 0; }
+  select { background: #2a2a38; color: #e8e8f0; border: 1px solid #3a3a48; padding: 3px 6px; font-size: 11px; border-radius: 3px; flex: 1; min-width: 0; }
+  .bubble-preview { margin-top: 6px; padding: 6px 8px; border-radius: 8px; line-height: 1.4; word-break: break-all; }
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="header">
+    <div class="title" data-i18n="settings.title">くろたん</div>
+    <div class="badge-unofficial" data-i18n="settings.badge_unofficial">Unofficial / Fan-made</div>
+  </div>
+
+  <div class="body">
+    <div class="section">
+      <div class="section-title" data-i18n="settings.section.art_style">Art Style</div>
+      <div class="row">
+        <input type="radio" name="art" id="art-pixel" value="pixel">
+        <label for="art-pixel" data-i18n="settings.art.pixel">ピクセル版</label>
+      </div>
+      <div class="row">
+        <input type="radio" name="art" id="art-sd" value="sd">
+        <label for="art-sd" data-i18n="settings.art.sd">アレンジ版</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title" data-i18n="settings.section.idle_cleanup">Idle Session Cleanup</div>
+      <div class="row">
+        <label id="cleanup-label">自動クローズ: <b id="cleanup-value">30</b> 分</label>
+      </div>
+      <input type="range" id="cleanup-slider" min="5" max="240" step="5" value="30">
+      <div class="row" style="justify-content: flex-end; padding-top: 6px;">
+        <button class="preset-btn" id="preset-qa" data-i18n="settings.cleanup.preset_qa">5 分</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title" data-i18n="settings.section.behavior">Behavior</div>
+      <div class="row">
+        <label data-i18n="settings.behavior.scan_on_startup">起動時に既存セッションを復元する</label>
+        <div class="toggle" id="toggle-scan-on-startup"></div>
+      </div>
+      <div class="row muted" style="font-size:11px; line-height:1.4; padding-top:0;" data-i18n="settings.behavior.scan_on_startup_desc">
+        kurotan を起動した時、すでに動いている Claude Code セッションを自動で検出してくろたんを表示します
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title" data-i18n="settings.section.bubble">Bubble (吹き出し)</div>
+      <div class="row">
+        <label for="bubble-font-family" data-i18n="settings.bubble.font_label">フォント</label>
+        <select id="bubble-font-family">
+          <option value="Noto Sans JP" data-i18n="settings.bubble.font_noto">Noto Sans JP</option>
+          <option value="Meiryo" data-i18n="settings.bubble.font_meiryo">メイリオ</option>
+          <option value="Yu Gothic UI" data-i18n="settings.bubble.font_yugothic">游ゴシック UI</option>
+          <option value="MS Gothic" data-i18n="settings.bubble.font_msgothic">MS ゴシック</option>
+          <option value="Segoe UI" data-i18n="settings.bubble.font_segoe">Segoe UI</option>
+          <option value="Consolas" data-i18n="settings.bubble.font_consolas">Consolas (等幅)</option>
+          <option value="Hiragino Maru Gothic ProN" data-i18n="settings.bubble.font_maru">丸ゴシック</option>
+        </select>
+      </div>
+      <div class="row">
+        <label><b id="bubble-fontsize-label">12 px</b></label>
+      </div>
+      <input type="range" id="bubble-fontsize" min="9" max="20" step="1" value="12">
+      <div class="row">
+        <label for="bubble-text-color" data-i18n="settings.bubble.text_color">文字色</label>
+        <input type="color" id="bubble-text-color" value="#e8e8f0">
+      </div>
+      <div class="row">
+        <label for="bubble-bg-color" data-i18n="settings.bubble.bg_color">背景色</label>
+        <input type="color" id="bubble-bg-color" value="#1e1e32">
+      </div>
+      <div class="row">
+        <label><b id="bubble-opacity-label">85%</b></label>
+      </div>
+      <input type="range" id="bubble-opacity" min="0" max="100" step="5" value="85">
+      <div class="bubble-preview" id="bubble-preview" data-i18n="settings.bubble.preview">プレビュー: できたよ！</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title" data-i18n="settings.section.hooks">Hooks Installer</div>
+      <div class="hooks-status" id="hooks-status" data-i18n="settings.hooks.status_checking">確認中...</div>
+      <button class="btn-primary" id="btn-install-hooks" data-i18n="settings.hooks.btn_install">hooks を再インストール</button>
+      <button class="btn-secondary" id="btn-uninstall-hooks" data-i18n="settings.hooks.btn_uninstall">hooks をアンインストール</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title" data-i18n="settings.section.language">Language</div>
+      <div class="row">
+        <label for="lang-select" data-i18n="settings.lang.label">表示言語</label>
+        <select id="lang-select">
+          <option value="auto" data-i18n="settings.lang.auto">Auto (システム設定に合わせる)</option>
+          <option value="ja" data-i18n="settings.lang.ja">日本語</option>
+          <option value="en" data-i18n="settings.lang.en">English</option>
+          <option value="zh-CN" data-i18n="settings.lang.zh_cn">简体中文</option>
+          <option value="zh-TW" data-i18n="settings.lang.zh_tw">繁體中文</option>
+          <option value="ko" data-i18n="settings.lang.ko">한국어</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title" data-i18n="settings.section.about">About</div>
+      <div class="about">
+        <strong>kurotan</strong> <span id="about-version">-</span>
+        <div class="about-unofficial" data-i18n="settings.about.unofficial">Unofficial fan-made app. Not an Anthropic product.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer" data-i18n="settings.footer">Unofficial fan-made app for Claude Code. Not affiliated with Anthropic.</div>
+</div>
+
+<script>
+'use strict';
+
+// ─── i18n ヘルパ (renderer インライン実装) ────────────────────────
+// contextIsolation 環境のため require 不可。
+// main から getConfig() 経由で辞書を受け取り、シンプルな t() を実装する。
+
+var _i18nDict = {};
+var _i18nFallbackDict = {};
+
+function t(key, params) {
+  var str = _i18nDict[key];
+  if (str === undefined || str === null) str = _i18nFallbackDict[key];
+  if (str === undefined || str === null) str = key;
+  if (params && typeof params === 'object') {
+    str = str.replace(/\{(\w+)\}/g, function(_, k) {
+      var v = params[k];
+      return (v !== undefined && v !== null) ? String(v) : '{' + k + '}';
+    });
+  }
+  return str;
+}
+
+function hydrateI18n() {
+ // textContent 更新 (option 以外)
+  document.querySelectorAll('[data-i18n]:not(option)').forEach(function(el) {
+    var key = el.getAttribute('data-i18n');
+    el.textContent = t(key);
+  });
+ // option は textContent のみ (value は保持)
+  document.querySelectorAll('option[data-i18n]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n');
+    el.textContent = t(key);
+  });
+ // data-i18n-attr="placeholder:key" 形式の属性翻訳
+  document.querySelectorAll('[data-i18n-attr]').forEach(function(el) {
+    var spec = el.getAttribute('data-i18n-attr');
+    var colonIdx = spec.indexOf(':');
+    if (colonIdx >= 0) {
+      el.setAttribute(spec.slice(0, colonIdx), t(spec.slice(colonIdx + 1)));
+    }
+  });
+ // cleanup ラベルを再描画 (プレースホルダあり)
+  updateCleanupLabel(parseInt(cleanupSlider ? cleanupSlider.value : 30, 10));
+ // bubble size / opacity ラベルも再描画
+  if (bubbleFontSize) {
+    bubbleFontSizeLabel.textContent = t('settings.bubble.size_label', { value: bubbleFontSize.value });
+  }
+  if (bubbleOpacity) {
+    bubbleOpacityLabel.textContent = t('settings.bubble.opacity_label', { value: bubbleOpacity.value });
+  }
+}
+
+function updateCleanupLabel(min) {
+  var labelEl = document.getElementById('cleanup-label');
+  if (!labelEl) return;
+ // innerHTML で <b> タグを保持しつつプレースホルダ展開
+  var raw = t('settings.cleanup.label', { value: min });
+ // プレースホルダ文字列中の min 値を <b> で囲む (label 内に cleanup-value id は不要になった)
+  labelEl.textContent = raw;
+}
+
+// ─── bridge ──────────────────────────────────────────────────────
+
+const bridge = window.kurotanBridge && window.kurotanBridge.settings;
+if (!bridge) {
+  document.getElementById('hooks-status').textContent = 'Bridge not available';
+  document.getElementById('hooks-status').className = 'hooks-status error';
+}
+
+// ─── ヘルパー ────────────────────────────────────────────────────
+
+function msToMin(ms) {
+  return Math.round(ms / 60000);
+}
+function minToMs(min) {
+  return min * 60000;
+}
+
+function setToggle(el, on) {
+  if (on) el.classList.add('on');
+  else el.classList.remove('on');
+}
+
+function getToggle(el) {
+  return el.classList.contains('on');
+}
+
+// ─── UI 要素 ─────────────────────────────────────────────────────
+
+const cleanupSlider = document.getElementById('cleanup-slider');
+const hooksStatus   = document.getElementById('hooks-status');
+const btnInstall    = document.getElementById('btn-install-hooks');
+const btnUninstall  = document.getElementById('btn-uninstall-hooks');
+const btnPresetQA   = document.getElementById('preset-qa');
+const bubbleFontFamily = document.getElementById('bubble-font-family');
+const bubbleFontSize   = document.getElementById('bubble-fontsize');
+const bubbleFontSizeLabel = document.getElementById('bubble-fontsize-label');
+const bubbleTextColor  = document.getElementById('bubble-text-color');
+const bubbleBgColor    = document.getElementById('bubble-bg-color');
+const bubbleOpacity    = document.getElementById('bubble-opacity');
+const bubbleOpacityLabel = document.getElementById('bubble-opacity-label');
+const bubblePreview    = document.getElementById('bubble-preview');
+const langSelect       = document.getElementById('lang-select');
+const toggleScanOnStartup = document.getElementById('toggle-scan-on-startup');
+
+// 0.9.33: 登場演出 select / 眠気表現 (contextMotion) を設定 UI から撤去
+
+function hexToRgb(hex) {
+  const m = String(hex || '').replace('#', '').match(/^([0-9a-f]{6})$/i);
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff };
+}
+
+function updateBubblePreview() {
+  const rgb = hexToRgb(bubbleBgColor.value) || { r: 30, g: 30, b: 50 };
+  const opacity = parseInt(bubbleOpacity.value, 10) / 100;
+  bubblePreview.style.background = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+  bubblePreview.style.color = bubbleTextColor.value;
+  bubblePreview.style.fontSize = `${bubbleFontSize.value}px`;
+  bubblePreview.style.fontFamily = `${bubbleFontFamily.value}, "Noto Sans JP", "Meiryo", sans-serif`;
+}
+
+async function saveBubble() {
+  if (!bridge) return;
+  await bridge.saveConfig({
+    bubble: {
+      fontFamily: bubbleFontFamily.value,
+      fontSize: parseInt(bubbleFontSize.value, 10),
+      textColor: bubbleTextColor.value,
+      bgColor: bubbleBgColor.value,
+      bgOpacity: parseInt(bubbleOpacity.value, 10) / 100,
+    },
+  });
+}
+
+// ─── 初期値ロード ─────────────────────────────────────────────────
+
+async function loadConfig() {
+  if (!bridge) return;
+  try {
+    const cfg = await bridge.getConfig();
+
+ // i18n 辞書を受け取って hydrate
+    if (cfg._i18nDict) {
+      _i18nDict = cfg._i18nDict;
+      _i18nFallbackDict = cfg._i18nFallbackDict || {};
+      hydrateI18n();
+    }
+
+ // artStyle
+    const artVal = cfg.artStyle || 'sd';
+    const artRadio = document.querySelector(`input[name="art"][value="${artVal}"]`);
+    if (artRadio && !artRadio.disabled) artRadio.checked = true;
+    else document.getElementById('art-sd').checked = true;
+
+ // cleanupTimeoutMs → スライダー (分単位)
+    const min = msToMin(cfg.cleanupTimeoutMs || 1800000);
+    const clamped = Math.min(240, Math.max(5, min));
+    cleanupSlider.value = clamped;
+    updateCleanupLabel(clamped);
+
+ // 0.9.36: nightMode トグルは設定 UI から撤去 (実装本体は残置)
+
+ // scanExistingSessionsOnStartup (§6.6)
+    setToggle(toggleScanOnStartup, cfg.scanExistingSessionsOnStartup !== false);
+
+ // bubble
+    const b = cfg.bubble || {};
+    if (b.fontFamily) {
+      const opt = bubbleFontFamily.querySelector(`option[value="${b.fontFamily}"]`);
+      if (opt) bubbleFontFamily.value = b.fontFamily;
+    }
+    if (b.fontSize) {
+      bubbleFontSize.value = b.fontSize;
+      bubbleFontSizeLabel.textContent = t('settings.bubble.size_label', { value: b.fontSize });
+    }
+    if (b.textColor) bubbleTextColor.value = b.textColor;
+    if (b.bgColor)   bubbleBgColor.value   = b.bgColor;
+    if (b.bgOpacity != null) {
+      bubbleOpacity.value = Math.round(b.bgOpacity * 100);
+      bubbleOpacityLabel.textContent = t('settings.bubble.opacity_label', { value: bubbleOpacity.value });
+    }
+    updateBubblePreview();
+
+ // hooks ステータス
+    updateHooksStatus(cfg._hooksInstalled);
+
+ // About: 動的バージョン表示 (0.9.32)
+    const aboutVersionEl = document.getElementById('about-version');
+    if (aboutVersionEl && cfg._appVersion) {
+      aboutVersionEl.textContent = `v${cfg._appVersion}`;
+    }
+
+ // language セレクト
+    if (langSelect && cfg.language) {
+      langSelect.value = cfg.language;
+    }
+  } catch (e) {
+    hooksStatus.textContent = t('settings.load_error');
+    hooksStatus.className = 'hooks-status error';
+  }
+}
+
+function updateHooksStatus(installed) {
+  if (installed === true) {
+    hooksStatus.textContent = t('settings.hooks.status_ok');
+    hooksStatus.className = 'hooks-status';
+  } else if (installed === false) {
+    hooksStatus.textContent = t('settings.hooks.status_error');
+    hooksStatus.className = 'hooks-status error';
+  } else {
+    hooksStatus.textContent = t('settings.hooks.status_unknown');
+    hooksStatus.className = 'hooks-status running';
+  }
+}
+
+// ─── 言語変更受信 (ホットスワップ) ──────────────────────────────
+if (window.kurotanBridge && window.kurotanBridge.onLocaleChanged) {
+  window.kurotanBridge.onLocaleChanged(function(data) {
+    if (data && data.dict) {
+      _i18nDict = data.dict;
+      _i18nFallbackDict = data.fallbackDict || {};
+      hydrateI18n();
+ // hooks status を現在の installed 状態で再翻訳
+      var cls = hooksStatus.className;
+      if (cls.includes('error')) {
+        updateHooksStatus(false);
+      } else if (cls.includes('running')) {
+        updateHooksStatus(null);
+      } else {
+        updateHooksStatus(true);
+      }
+ // lang select を現在値に合わせる
+      if (langSelect && data.lang) langSelect.value = data.lang;
+    }
+  });
+}
+
+// ─── イベント ─────────────────────────────────────────────────────
+
+// artStyle ラジオ
+document.querySelectorAll('input[name="art"]').forEach((radio) => {
+  radio.addEventListener('change', async () => {
+    if (!bridge || radio.disabled) return;
+    await bridge.saveConfig({ artStyle: radio.value });
+  });
+});
+
+// cleanupTimeoutMs スライダー
+cleanupSlider.addEventListener('input', () => {
+  updateCleanupLabel(parseInt(cleanupSlider.value, 10));
+});
+cleanupSlider.addEventListener('change', async () => {
+  if (!bridge) return;
+  await bridge.saveConfig({ cleanupTimeoutMs: minToMs(parseInt(cleanupSlider.value, 10)) });
+});
+
+// QA プリセット (5 分)
+btnPresetQA.addEventListener('click', async () => {
+  if (!bridge) return;
+  cleanupSlider.value = 5;
+  updateCleanupLabel(5);
+  await bridge.saveConfig({ cleanupTimeoutMs: minToMs(5) });
+});
+
+// scanExistingSessionsOnStartup トグル (§6.6)
+if (toggleScanOnStartup) {
+  toggleScanOnStartup.addEventListener('click', async () => {
+    if (!bridge) return;
+    const next = !getToggle(toggleScanOnStartup);
+    setToggle(toggleScanOnStartup, next);
+    await bridge.saveConfig({ scanExistingSessionsOnStartup: next });
+  });
+}
+
+// bubble カスタマイズ
+bubbleFontFamily.addEventListener('change', () => { updateBubblePreview(); saveBubble(); });
+bubbleFontSize.addEventListener('input', () => {
+  bubbleFontSizeLabel.textContent = t('settings.bubble.size_label', { value: bubbleFontSize.value });
+  updateBubblePreview();
+});
+bubbleFontSize.addEventListener('change', saveBubble);
+bubbleTextColor.addEventListener('input', updateBubblePreview);
+bubbleTextColor.addEventListener('change', () => { updateBubblePreview(); saveBubble(); });
+bubbleBgColor.addEventListener('input', updateBubblePreview);
+bubbleBgColor.addEventListener('change', () => { updateBubblePreview(); saveBubble(); });
+bubbleOpacity.addEventListener('input', () => {
+  bubbleOpacityLabel.textContent = t('settings.bubble.opacity_label', { value: bubbleOpacity.value });
+  updateBubblePreview();
+});
+bubbleOpacity.addEventListener('change', saveBubble);
+
+// 言語セレクト
+if (langSelect) {
+  langSelect.addEventListener('change', async () => {
+    if (!bridge) return;
+    const newLang = langSelect.value;
+    await bridge.saveConfig({ language: newLang });
+    if (window.kurotanBridge && window.kurotanBridge.notifyLocaleChange) {
+      window.kurotanBridge.notifyLocaleChange(newLang);
+    }
+  });
+}
+
+// hooks インストール
+btnInstall.addEventListener('click', async () => {
+  if (!bridge) return;
+  btnInstall.disabled = true;
+  btnUninstall.disabled = true;
+  hooksStatus.textContent = t('settings.hooks.installing');
+  hooksStatus.className = 'hooks-status running';
+  try {
+    const result = await bridge.installHooks();
+    if (result.code === 0) {
+      hooksStatus.textContent = t('settings.hooks.install_done');
+      hooksStatus.className = 'hooks-status';
+    } else {
+      hooksStatus.textContent = t('settings.hooks.install_error', { code: result.code });
+      hooksStatus.className = 'hooks-status error';
+    }
+  } catch (e) {
+    hooksStatus.textContent = t('settings.hooks.install_error_msg', { message: e.message });
+    hooksStatus.className = 'hooks-status error';
+  } finally {
+    btnInstall.disabled = false;
+    btnUninstall.disabled = false;
+  }
+});
+
+// hooks アンインストール
+btnUninstall.addEventListener('click', async () => {
+  if (!bridge) return;
+  btnInstall.disabled = true;
+  btnUninstall.disabled = true;
+  hooksStatus.textContent = t('settings.hooks.uninstalling');
+  hooksStatus.className = 'hooks-status running';
+  try {
+    const result = await bridge.uninstallHooks();
+    if (result.code === 0) {
+      hooksStatus.textContent = t('settings.hooks.uninstall_done');
+      hooksStatus.className = 'hooks-status error';
+    } else {
+      hooksStatus.textContent = t('settings.hooks.uninstall_error', { code: result.code });
+      hooksStatus.className = 'hooks-status error';
+    }
+  } catch (e) {
+    hooksStatus.textContent = t('settings.hooks.install_error_msg', { message: e.message });
+    hooksStatus.className = 'hooks-status error';
+  } finally {
+    btnInstall.disabled = false;
+    btnUninstall.disabled = false;
+  }
+});
+
+// ─── 起動 ─────────────────────────────────────────────────────────
+
+loadConfig();
+</script>
+</body>
+</html>

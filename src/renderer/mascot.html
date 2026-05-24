@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>くろたん</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="mascot-root" class="state-idle">
+
+ <!-- 吹き出し -->
+    <div class="bubble" id="bubble" role="status" aria-live="polite"></div>
+
+ <!-- 親マスコット本体 -->
+    <div id="parent-mascot">
+      <div class="sprite" id="sprite" aria-label="くろたん"></div>
+    </div>
+
+ <!-- 状態ラベル（デバッグ / 実機確認用） -->
+    <div class="state-label" id="state-label">idle</div>
+
+ <!-- tool_skill 星エフェクト（スプライト外 DOM 要素） -->
+    <div id="skill-star-fx" aria-hidden="true"></div>
+
+ <!-- offline 感嘆符アイコン（スプライト外 DOM 要素） -->
+    <div id="offline-exclaim" aria-hidden="true"></div>
+
+ <!-- 子くろたん行（Agent ツール発動時） -->
+    <div id="children-row" aria-label="サブエージェント"></div>
+
+  </div>
+
+  <script src="mascot.js"></script>
+</body>
+</html>

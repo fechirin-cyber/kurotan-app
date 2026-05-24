@@ -1,0 +1,127 @@
+appId: com.kurotan.unofficial
+productName: kurotan
+
+directories:
+  output: dist
+
+# electron-builder v25 + electron 33 で win.icon の自動埋め込みが silently skip
+# される事象への対策として afterPack で rcedit を明示実行する。
+afterPack: ./scripts/after-pack.js
+
+# ─── パッケージ対象ファイル ──────────────────────────────────────
+files:
+  - src/**/*
+  - assets/**/*
+  - package.json
+  - node_modules/**/*
+  # LICENSE / NOTICE / AUTHORS は法的表記のため保持する。README / CHANGELOG / docs / examples / tests のみ除外
+  - "!node_modules/*/{README,CHANGELOG,CHANGES,HISTORY}{,.md,.txt,.rst}"
+  - "!node_modules/*/{doc,docs,example,examples,test,tests,__tests__}/**"
+  - "!node_modules/*/.github/**"
+  - "!node_modules/*/.eslintrc*"
+  - "!node_modules/*/.prettierrc*"
+  - "!docs/**"
+  - "!test/**"
+  - "!tmp/**"
+  - "!scripts/**"
+  - "!build/**"
+  - "!.git/**"
+  - "!.claude/**"
+  - "!*.log"
+  - "!*.md"
+  - "!assets/**/*.py"
+  - "!assets/**/*.psd"
+  - "!assets/**/palette.md"
+  - "!assets/**/*_preview*.png"
+  - "!assets/**/*_backup_*"
+  - "!assets/_backup_pre_2026-04-29/**"
+  - "!assets/_sd_history_compare.png"
+  - "!assets/pixel_backup_pre_dotart/**"
+  - "!assets/sd_legacy_backup/**"
+  - "!assets/references/**"
+  - "!assets/tmp/**"
+
+# ─── asar 設定 ──────────────────────────────────────────────────
+asar: true
+asarUnpack:
+  - "assets/**"
+  - "!assets/**/*.py"
+  - "!assets/**/*.psd"
+  - "!assets/**/palette.md"
+  - "!assets/**/*_preview*.png"
+  - "!assets/**/*_backup_*"
+  - "!assets/_backup_pre_2026-04-29/**"
+  - "!assets/_sd_history_compare.png"
+  - "!assets/pixel_backup_pre_dotart/**"
+  - "!assets/sd_legacy_backup/**"
+  - "!assets/references/**"
+  - "!assets/tmp/**"
+
+# ─── 追加リソース (asar 外に配置) ─────────────────────────────
+extraResources:
+  - from: LICENSE
+    to: LICENSE
+  - from: EULA.md
+    to: EULA.md
+  - from: NOTICE.md
+    to: NOTICE.md
+  # 配布版同梱は LICENSE / EULA.md / NOTICE.md / EULA.txt のみ
+  - from: build/license/EULA.txt
+    to: EULA.txt
+  - from: build/license/third-party-licenses.json
+    to: build/license/third-party-licenses.json
+  - from: src/notify
+    to: app.asar.unpacked/src/notify
+    filter:
+      - "**/*"
+  - from: src/installer
+    to: app.asar.unpacked/src/installer
+    filter:
+      - "**/*"
+  # bridge が require する permission-resolver は asar 外展開が必要
+  # （未展開だと Auto モードで全ツールが ask フォールバックする）
+  - from: src/permission-resolver
+    to: app.asar.unpacked/src/permission-resolver
+    filter:
+      - "**/*"
+
+# ─── Windows 設定 ───────────────────────────────────────────────
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  # アイコン: 存在しない場合は electron-builder が警告を出すが
+  # ビルド自体は継続される（NSIS ビルド時にデフォルトアイコンが使用される）
+  icon: assets/icons/kurotan.ico
+  # 未署名配布の明示設定
+  signAndEditExecutable: false
+  verifyUpdateCodeSignature: false
+  forceCodeSigning: false
+  # .exe メタデータ (Authenticode 社名は Anthropic 名義不使用 — §13.5.4)
+  legalTrademarks: "kurotan contributors"
+
+# ─── NSIS インストーラ設定 ─────────────────────────────────────
+nsis:
+  # ユーザー領域インストール (%LOCALAPPDATA%\Programs\kurotan\) — 管理者権限不要
+  perMachine: false
+  # UI ありインストーラ (oneClick=false でインストール先変更可能)
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  # ショートカット
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: kurotan
+  # ユーザーデータは既定で残す (§13.4.1 / §13.6.4)
+  deleteAppDataOnUninstall: false
+  # EULA 表示 (UTF-8 BOM 付き .txt — build-prepare.js で生成)
+  license: build/license/EULA.txt
+  # アイコン設定
+  installerIcon: assets/icons/kurotan.ico
+  uninstallerIcon: assets/icons/kurotan.ico
+  # カスタムアンインストール処理 (kurotan-notify hook 削除)
+  include: build/installer.nsh
+
+# ─── 自動更新 — MVP では無効 (§13.4.6) ────────────────────────
+# publish フィールドを省略することで自動更新設定なし。
+# latest.yml / *.blockmap は electron-builder が自動生成するが配布時は *.exe のみ送付。
