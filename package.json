@@ -1,0 +1,26 @@
+{
+  "name": "kurotan",
+  "version": "0.9.74",
+  "description": "Kurotan - An unofficial fan-made desktop mascot for Claude Code",
+  "author": "kurotan contributors",
+  "license": "MIT",
+  "private": true,
+  "main": "src/main/index.js",
+  "scripts": {
+    "dev": "electron .",
+    "prebuild": "node scripts/build-prepare.js",
+    "build": "electron-builder --win",
+    "build:dir": "electron-builder --win --dir",
+    "install-hooks": "node src/installer/install-hooks.js",
+    "install-hooks:dry": "node src/installer/install-hooks.js --dry-run",
+    "uninstall-hooks": "node src/installer/install-hooks.js --uninstall"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "license-checker": "^25.0.1"
+  },
+  "dependencies": {
+    "koffi": "^2.16.2"
+  }
+}

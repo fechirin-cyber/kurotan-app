@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>くろたん Stage</title>
+  <link rel="stylesheet" href="stage.css">
+</head>
+<body>
+ <!--
+    Stage Window 全画面コンテナ。
+    body は pointer-events: none で click-through 基本設定。
+    マスコット DOM は JS (mascot-stage.js) で動的生成する。
+  -->
+  <div id="mascot-stage"></div>
+
+  <script src="mascot-stage.js"></script>
+</body>
+</html>

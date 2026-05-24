@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'">
+  <title>Custom 確認設定 - kurotan</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="header">
+    <h1 data-i18n="custom_confirm.title">Custom 確認設定 - kurotan</h1>
+    <div id="mode-display" aria-live="polite">現在のモード: 読み込み中...</div>
+  </div>
+
+  <div id="main">
+
+ <!-- ツール種別ごとの設定 -->
+    <div class="section" role="region" aria-label="ツール種別ごとの設定">
+      <div class="section-title" data-i18n="custom_confirm.section.tooltypes">ツール種別ごとの設定</div>
+      <div id="tooltype-list">
+ <!-- JS で動的生成 -->
+      </div>
+      <div class="tooltype-legend" data-i18n="custom_confirm.legend">凡例: 許可=無条件OK / 確認=毎回UI表示 / 拒否=無条件NG / 自動=settings委譲</div>
+      <div id="tooltype-error" role="alert" aria-live="assertive"></div>
+    </div>
+
+ <!-- 個別パターン例外 -->
+    <div class="section" role="region" aria-label="個別パターン例外">
+      <div class="section-header" id="exceptions-header">
+        <button class="section-toggle" id="btn-toggle-exceptions" aria-expanded="true" aria-controls="exceptions-body">
+          <span class="toggle-arrow" id="exceptions-arrow">▼</span>
+          <span class="section-title-inline" data-i18n="custom_confirm.section.exceptions">個別パターン例外 (advanced)</span>
+        </button>
+      </div>
+      <div id="exceptions-body">
+        <div id="exceptions-list" role="list" aria-label="個別パターン例外一覧">
+          <div class="empty-hint" data-i18n="custom_confirm.exceptions.empty">例外なし</div>
+        </div>
+ <!-- 直接追加 -->
+        <div id="exception-add-row">
+          <input id="exception-input" type="text"
+            placeholder="例: Bash(npm install:*) / Edit(./src/**) / WebFetch(domain:*.github.com)"
+            aria-label="追加する例外パターン (例: Bash(npm install:*))">
+          <select id="exception-add-decision" aria-label="追加する例外の decision">
+            <option value="ask" selected data-i18n="custom_confirm.decision.ask">確認</option>
+            <option value="allow" data-i18n="custom_confirm.decision.allow">許可</option>
+            <option value="deny" data-i18n="custom_confirm.decision.deny">拒否</option>
+            <option value="inherit" data-i18n="custom_confirm.decision.inherit">自動</option>
+          </select>
+          <button id="btn-exception-add" data-i18n="custom_confirm.exceptions.add_btn" aria-label="入力した例外パターンを追加">追加</button>
+        </div>
+        <div id="exception-add-hint" class="input-hint" data-i18n="custom_confirm.exceptions.placeholder">例: Bash(npm install:*) / Edit(./src/**) / WebFetch(domain:*.github.com)</div>
+        <div id="exception-add-error" role="alert" aria-live="assertive"></div>
+        <div id="exception-overwrite-confirm" class="overwrite-confirm" style="display:none" role="alert" aria-live="polite">
+          <span id="exception-overwrite-msg"></span>
+          <button id="btn-overwrite-yes" data-i18n="custom_confirm.exceptions.overwrite_yes">上書き</button>
+          <button id="btn-overwrite-no" data-i18n="custom_confirm.exceptions.overwrite_no">キャンセル</button>
+        </div>
+      </div>
+    </div>
+
+ <!-- 履歴セクション -->
+    <div id="history-section" class="section">
+      <div class="section-title" data-i18n="custom_confirm.section.history">全履歴</div>
+      <div id="history-controls">
+        <input id="history-search" type="text" placeholder="tool / key で絞り込み" aria-label="履歴を tool 名や key で絞り込み">
+        <select id="history-sort" aria-label="履歴ソート順">
+          <option value="newest" selected data-i18n="custom_confirm.history.sort_newest">新しい順</option>
+          <option value="oldest" data-i18n="custom_confirm.history.sort_oldest">古い順</option>
+        </select>
+        <span id="history-count">0 件</span>
+        <button id="btn-refresh-history" data-i18n="custom_confirm.history.refresh_btn" aria-label="履歴を再読み込み">更新</button>
+      </div>
+      <div id="history-viewport" role="region" aria-label="権限要求履歴一覧">
+        <div id="history-spacer" aria-hidden="true"></div>
+        <div id="history-rows" role="list"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="index.js"></script>
+</body>
+</html>

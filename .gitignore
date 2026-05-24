@@ -1,0 +1,86 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Electron build output
+dist/
+out/
+*.exe
+*.msi
+*.AppImage
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# kurotan-notify runtime
+%APPDATA%/kurotan/
+runtime.json
+
+# Reference / capture images (not part of the distribution)
+**/rapture_*.png
+**/OneDrive/**
+
+# Local secrets
+.env
+.env.local
+
+# kurotan 固有
+*.kurotan.bak
+*.log
+
+# Generated at prebuild time
+build/license/EULA.txt
+build/license/third-party-licenses.json
+
+# Dev / debug scratch (not for distribution)
+debug_*.ps1
+debug_fix.ps1
+runtime/
+tools/
+tests/
+dev.log.captures/
+verify_*.png
+test_perm*.png
+
+# Asset generation scripts (dev tools)
+assets/gen_*.py
+assets/hotfix_*.py
+assets/extract_*.py
+assets/palette.md
+assets/promo_telop/
+assets/tmp/
+
+# Historical asset backups
+**/_backup_*/
+**/*_backup_*/
+**/*backup_pre_*/
+
+# Large source assets
+*.psd
+
+# Promo intermediates
+promo/
+
+# Internal documentation (not for distribution)
+docs/
+CLAUDE.md
+CLAUDE_MEMO.md
+CHANGELOG.md
+KNOWN_ISSUES.md
+
+# Tests / dev-only assets
+test/
+assets/sd_legacy_backup/
+assets/screenshots/
+assets/references/
+scripts/trim_sprites.py
+assets/fx/gen_*.py
+assets/icons/gen_*.py
+assets/pixel/gen_*.py

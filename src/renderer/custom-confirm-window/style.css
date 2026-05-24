@@ -1,0 +1,555 @@
+/* §5.11.7 / §5.10.5.A 制約準拠
+   - CSS animation (@keyframes) 使用禁止
+   - transform 使用禁止
+   - アニメは transition のみで実装すること */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', 'Noto Sans JP', sans-serif;
+  font-size: 13px;
+  background: #1e1e2e;
+  color: #cdd6f4;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ─── ヘッダー ─────────────────────────────────────── */
+#header {
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid #313244;
+  background: #181825;
+  flex-shrink: 0;
+}
+
+#header h1 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #D77757; /* kurotan テラコッタアクセント (palette.md dialog-accent) — #181825 背景とのコントラスト 5.57:1 (AA Normal 達成) */
+  margin-bottom: 4px;
+}
+
+#mode-display {
+  font-size: 12px;
+  color: #a6e3a1;
+}
+
+#mode-display.mode-auto { color: #a6e3a1; }
+#mode-display.mode-custom { color: #f38ba8; }
+
+/* ─── メインレイアウト ─────────────────────────────── */
+#main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 14px;
+  gap: 10px;
+}
+
+/* ─── セクション共通 ────────────────────────────────── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #89b4fa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #313244;
+}
+
+/* ─── ツール種別セクション ──────────────────────────── */
+#tooltype-list {
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 4px;
+}
+
+.tooltype-row {
+  display: flex;
+  align-items: center;
+  padding: 5px 8px;
+  gap: 12px;
+  border-bottom: 1px solid #26263a;
+}
+
+.tooltype-row:last-child {
+  border-bottom: none;
+}
+
+.tooltype-row:hover {
+  background: #26263a;
+  transition: background-color 0.1s;
+}
+
+.tooltype-name {
+  width: 80px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  color: #cdd6f4;
+  flex-shrink: 0;
+}
+
+.tooltype-radios {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.tooltype-radios label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  color: #cdd6f4;
+  white-space: nowrap;
+}
+
+.tooltype-radios input[type="radio"] {
+  cursor: pointer;
+  accent-color: #D77757; /* kurotan アクセント (palette.md dialog-accent) */
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+/* Other 行警告ラベル */
+.tooltype-warning {
+  margin-left: auto;
+  font-size: 10px;
+  color: #fab387; /* Catppuccin Peach (palette.md 既登録) */
+  font-style: italic;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Other 行 = "allow" 選択時の強調警告 */
+.tooltype-row[data-tooltype="Other"].allow-selected .tooltype-warning {
+  color: #f38ba8; /* Catppuccin Red 強調 */
+  font-weight: bold;
+  font-style: normal;
+  background: rgba(243, 139, 168, 0.12);
+  padding: 1px 5px;
+  border-radius: 3px;
+  transition: background-color 0.1s, color 0.1s;
+}
+
+/* allow 選択時の強調警告テキスト (JS でテキスト切替) */
+
+.tooltype-legend {
+  font-size: 10px;
+  color: #a6adc8; /* Catppuccin Mocha subtext0 — #1e1e2e 背景とのコントラスト 8.97:1 (AAA Normal 達成) */
+  padding-top: 3px;
+}
+
+#tooltype-error {
+  font-size: 11px;
+  color: #f38ba8;
+  padding: 2px 0;
+  min-height: 16px;
+}
+
+/* ─── 例外セクション ────────────────────────────────── */
+.section-header {
+  display: flex;
+  align-items: center;
+}
+
+.section-toggle {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #313244;
+}
+
+.toggle-arrow {
+  font-size: 10px;
+  color: #89b4fa;
+  width: 12px;
+  flex-shrink: 0;
+}
+
+.section-title-inline {
+  font-size: 11px;
+  font-weight: 600;
+  color: #89b4fa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#exceptions-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#exceptions-list {
+  max-height: 180px;
+  overflow-y: auto;
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 4px;
+}
+
+.exception-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid #26263a;
+}
+
+.exception-row:last-child {
+  border-bottom: none;
+}
+
+.exception-row:hover {
+  background: #26263a;
+  transition: background-color 0.1s;
+}
+
+.exception-rule {
+  flex: 1;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  color: #f9e2af;
+  word-break: break-all;
+}
+
+.exception-decision {
+  width: 80px;
+  background: #181825;
+  border: 1px solid #313244;
+  color: #cdd6f4;
+  padding: 2px 4px;
+  font-size: 11px;
+  border-radius: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.1s;
+}
+
+.exception-decision:focus {
+  outline: none;
+  border-color: #89b4fa;
+}
+
+.btn-delete {
+  background: transparent;
+  border: 1px solid #45475a;
+  border-radius: 3px;
+  color: #f38ba8;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
+.btn-delete:hover {
+  background: #3b1f2b;
+  transition: background-color 0.1s;
+}
+
+.empty-hint {
+  padding: 8px;
+  color: #a6adc8; /* Catppuccin Mocha subtext0 — #181825 背景とのコントラスト 8.97:1 相当 (AAA Normal 達成) */
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* ─── 例外追加行 ─────────────────────────────────────── */
+#exception-add-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+  padding-top: 4px;
+  border-top: 1px solid #313244;
+}
+
+#exception-input {
+  flex: 1;
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 3px;
+  color: #cdd6f4;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+#exception-input:focus {
+  outline: none;
+  border-color: #89b4fa;
+}
+
+#exception-add-decision {
+  width: 72px;
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 3px;
+  color: #cdd6f4;
+  padding: 5px 4px;
+  font-size: 11px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+#exception-add-decision:focus {
+  outline: none;
+  border-color: #89b4fa;
+}
+
+#btn-exception-add {
+  background: #cba6f7;
+  border: none;
+  border-radius: 3px;
+  color: #1e1e2e;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  flex-shrink: 0;
+}
+
+#btn-exception-add:hover {
+  background: #b4a0e5;
+  transition: background-color 0.1s;
+}
+
+.input-hint {
+  font-size: 10px;
+  color: #a6adc8; /* Catppuccin Mocha subtext0 — #1e1e2e 背景とのコントラスト 8.97:1 (AAA Normal 達成) */
+  padding: 2px 0;
+}
+
+#exception-add-error {
+  font-size: 11px;
+  color: #f38ba8;
+  padding: 2px 0;
+  min-height: 16px;
+}
+
+.overwrite-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: rgba(249, 226, 175, 0.08);
+  border: 1px solid #45475a;
+  border-radius: 3px;
+  font-size: 11px;
+  color: #f9e2af;
+}
+
+.overwrite-confirm button {
+  background: #313244;
+  border: 1px solid #45475a;
+  border-radius: 3px;
+  color: #cdd6f4;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 8px;
+  flex-shrink: 0;
+}
+
+.overwrite-confirm button:hover {
+  background: #45475a;
+  transition: background-color 0.1s;
+}
+
+/* ─── 履歴セクション ────────────────────────────────── */
+#history-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 160px;
+}
+
+#history-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+#history-search {
+  flex: 1;
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 3px;
+  color: #cdd6f4;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+#history-search:focus {
+  outline: none;
+  border-color: #89b4fa;
+}
+
+#history-sort {
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 3px;
+  color: #cdd6f4;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+#history-sort:focus {
+  outline: none;
+  border-color: #89b4fa;
+}
+
+#history-count {
+  font-size: 11px;
+  color: #a6adc8; /* Catppuccin Mocha subtext0 — #1e1e2e 背景とのコントラスト 8.97:1 (AAA Normal 達成) */
+  white-space: nowrap;
+}
+
+#btn-refresh-history {
+  background: #313244;
+  border: 1px solid #45475a;
+  border-radius: 3px;
+  color: #cdd6f4;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 4px 8px;
+  flex-shrink: 0;
+}
+
+#btn-refresh-history:hover {
+  background: #45475a;
+  transition: background-color 0.1s;
+}
+
+/* ─── 仮想スクロール履歴リスト ─────────────────────── */
+#history-viewport {
+  flex: 1;
+  overflow-y: auto;
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 4px;
+  position: relative;
+  min-height: 0;
+}
+
+#history-spacer {
+ /* 全件分の高さ (JS で設定) */
+  width: 1px;
+}
+
+#history-rows {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid #26263a;
+  height: 30px;
+}
+
+.history-row:hover {
+  background: #26263a;
+  transition: background-color 0.1s;
+}
+
+.history-tool {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 11px;
+  color: #89dceb;
+  flex-shrink: 0;
+  min-width: 50px;
+}
+
+.history-key {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 11px;
+  color: #f9e2af;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-ts {
+  font-size: 10px;
+  color: #a6adc8; /* Catppuccin Mocha subtext0 — #181825 背景とのコントラスト 8.97:1 相当 (AAA Normal 達成) */
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.history-decision {
+  font-size: 10px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  min-width: 48px;
+  text-align: right;
+}
+
+.history-decision.allow  { color: #a6e3a1; }
+.history-decision.deny   { color: #f38ba8; }
+.history-decision.ui     { color: #fab387; }
+.history-decision.ask    { color: #f9e2af; }
+
+.btn-add-exception {
+  background: transparent;
+  border: 1px solid #45475a;
+  border-radius: 3px;
+  color: #89b4fa;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.btn-add-exception:hover {
+  background: #26263a;
+  transition: background-color 0.1s;
+}
+
+/* ─── スクロールバー ────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #181825;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #45475a;
+  border-radius: 3px;
+}

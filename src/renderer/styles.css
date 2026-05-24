@@ -1,0 +1,316 @@
+/*
+ * kurotan renderer styles
+ * 吹き出しスタイルは LiveLoop 踏襲ベース（仕様 §3.2 / agent_guide §6.1）
+ */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+html, body {
+  width: 320px;
+  height: 220px;
+  background: transparent;
+  overflow: hidden;
+  font-family: 'Noto Sans JP', 'Meiryo', sans-serif;
+  font-size: 12px;
+  color: #E8E8F0;
+}
+
+/* ─── マスコットコンテナ ─────────────────────────────────────── */
+#mascot-root {
+  position: relative;
+  width: 320px;
+  height: 220px;
+}
+
+/* ─── 吹き出し（LiveLoop 踏襲） ──────────────────────────────── */
+.bubble {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  width: fit-content;
+  max-width: 304px; /* container 320 - 余白 16 */
+  min-width: 32px;
+  text-align: center;
+  background: rgba(30, 30, 50, 0.85);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: #E8E8F0;
+  line-height: 1.4;
+  max-height: 3.5em; /* 最大 3 行 */
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.bubble.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.bubble.pinned {
+  opacity: 1;
+ /* ピン留め時は fadeout しない */
+}
+
+/* +N 表示（Agent 上限超過） */
+.bubble .overflow-badge {
+  display: inline-block;
+  font-size: 10px;
+  background: rgba(30, 30, 50, 0.85);
+  border-radius: 3px;
+  padding: 0 3px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* ─── 親マスコット本体（ピクセル版 プレースホルダ） ────────────
+ * idle.png は 64×64 で下 21px が透明余白。
+ * #parent-mascot height = 43px (= 64 - 21) で window 底辺に bottom:0 固定。
+ * .sprite を bottom: -22px にして 22px 外に下ろし、
+ * タスクバーに 1px 食い込ませて「立ってる感」を強調。
+ * overflow: visible でスプライトのはみ出しを許容する。
+ */
+#parent-mascot {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  top: auto;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 43px;
+  overflow: visible;
+
+ /* ドラッグ可能領域（仕様 §3.1） */
+  -webkit-app-region: drag;
+
+ /* アイドル呼吸アニメ（CSS keyframes のみ / JS タイマー禁止） */
+  animation: breathing 3s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+/* ─── マスコットスプライト（アセット版） ────────────────────── */
+#parent-mascot .sprite {
+  width: 64px;
+  height: 64px;
+  position: absolute;
+ /* idle.png 下透明 21px 分 + 1px 深め。タスクバーに食い込ませて「立ってる感」強調。 */
+  bottom: -22px;
+  left: 0;
+  image-rendering: pixelated;
+  background-size: 64px 64px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+
+/* ─── 状態別アセット切り替え ──────────────────────────────── */
+#mascot-root.state-idle #parent-mascot .sprite { background-image: url('../../assets/pixel/idle.png'); }
+#mascot-root.state-thinking #parent-mascot .sprite { background-image: url('../../assets/pixel/thinking.png'); }
+#mascot-root.state-tool-read #parent-mascot .sprite { background-image: url('../../assets/pixel/tool_read.png'); }
+#mascot-root.state-tool-edit #parent-mascot .sprite { background-image: url('../../assets/pixel/tool_edit.png'); }
+#mascot-root.state-tool-bash #parent-mascot .sprite { background-image: url('../../assets/pixel/tool_bash.png'); }
+#mascot-root.state-tool-web #parent-mascot .sprite { background-image: url('../../assets/pixel/tool_web.png'); }
+#mascot-root.state-tool-skill #parent-mascot .sprite { background-image: url('../../assets/pixel/tool_skill.png'); }
+#mascot-root.state-tool-other #parent-mascot .sprite { background-image: url('../../assets/pixel/tool_other.png'); }
+#mascot-root.state-success #parent-mascot .sprite { background-image: url('../../assets/pixel/success.png'); }
+#mascot-root.state-error #parent-mascot .sprite { background-image: url('../../assets/pixel/error.png'); }
+#mascot-root.state-permission #parent-mascot .sprite { background-image: url('../../assets/pixel/permission.png'); }
+#mascot-root.state-farewell #parent-mascot .sprite { background-image: url('../../assets/pixel/farewell.png'); }
+#mascot-root.state-offline #parent-mascot .sprite { background-image: url('../../assets/pixel/offline.png'); opacity: 0.6; }
+
+/* ─── tool_skill 星エフェクト（fx DOM 要素） ────────────────────
+   スプライトに焼き込まない。CSS keyframes で点滅管理（仕様 §6.2 / agent_guide §5.1） */
+#skill-star-fx {
+  position: absolute;
+  top: 36px;       /* 親マスコット頭上 */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 16px;
+  background-image: url('../../assets/fx/skill_star.png');
+  background-size: 16px 16px;
+  background-position: center;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+#skill-star-fx.active {
+  animation: star-pop 0.6s ease-in-out 3; /* 3 回点滅 */
+}
+
+/* ─── offline 状態の ! アイコン ──────────────────────────────── */
+#offline-exclaim {
+  position: absolute;
+  top: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 16px;
+  background-image: url('../../assets/fx/offline_exclaim.png');
+  background-size: 16px 16px;
+  background-position: center;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+#offline-exclaim.active {
+  animation: offline-pulse 2s ease-in-out infinite; /* 2 秒周期 */
+}
+
+/* ─── 状態ラベル（デバッグ用 / デフォルト非表示） ───────────── */
+/* URL に #debug ハッシュがある場合のみ表示（mascot.js 側で制御） */
+.state-label {
+  position: absolute;
+  bottom: 130px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: rgba(200, 200, 220, 0.6);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+  display: none;
+}
+
+.state-label.debug-visible {
+  display: block;
+}
+
+/* ─── 子くろたん行 ───────────────────────────────────────────── */
+#children-row {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  height: 48px;
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.child-mascot {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  position: relative;
+ /* 子はドラッグ不可（仕様 §5.4.6 / agent_guide §5.2 7項） */
+  -webkit-app-region: no-drag;
+}
+
+.child-mascot .child-sprite {
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+  background-size: 48px 48px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* 子くろたん状態別アセット */
+.child-mascot.child-state-idle    .child-sprite { background-image: url('../../assets/pixel/child/child_idle.png'); }
+.child-mascot.child-state-mimic   .child-sprite { background-image: url('../../assets/pixel/child/child_mimic.png'); }
+.child-mascot.child-state-spawn   .child-sprite { background-image: url('../../assets/pixel/child/child_spawn.png'); }
+.child-mascot.child-state-farewell .child-sprite { background-image: url('../../assets/pixel/child/child_farewell.png'); }
+
+.child-mascot .child-bubble {
+  position: absolute;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30, 30, 50, 0.85);
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 10px; /* 子は 10px（仕様 §5.4.5） */
+  color: #E8E8F0;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.child-mascot .child-bubble.visible {
+  opacity: 1;
+}
+
+/* ─── アニメーション keyframes ──────────────────────────────── */
+
+/* 呼吸（上下 2px, 3s / 仕様 §5.1 idle） */
+@keyframes breathing {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%       { transform: translateX(-50%) translateY(-2px); }
+}
+
+
+/* 星エフェクト点滅（0.6 秒間隔で 3 回 = active クラス + iteration: 3 / 仕様 §5.3） */
+@keyframes star-pop {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.6); }
+  50%  { opacity: 1; transform: translateX(-50%) scale(1.0); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.6); }
+}
+
+/* offline ! パルス（2 秒周期 opacity 0.7 ↔ 1.0 / 仕様 §10.1） */
+@keyframes offline-pulse {
+  0%, 100% { opacity: 0.7; }
+  50%       { opacity: 1.0; }
+}
+
+/* farewell 前傾お辞儀（仕様 §5.1 / §6.3: 0.6s で 8deg → 0.4s 保持 → close） */
+@keyframes farewell-bow {
+  0%   { transform: translateX(-50%) rotate(0deg); }
+  60%  { transform: translateX(-50%) rotate(8deg); }
+  100% { transform: translateX(-50%) rotate(8deg); }
+}
+
+.state-farewell #parent-mascot {
+  animation: farewell-bow 1s ease-in-out forwards;
+  transform-origin: 50% 80%;
+}
+
+/* success ぴょんっと跳ねる */
+@keyframes jump {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  30%       { transform: translateX(-50%) translateY(-8px); }
+  60%       { transform: translateX(-50%) translateY(-4px); }
+}
+
+/* ポップイン（子くろたん生成時） */
+@keyframes pop-in {
+  0%   { opacity: 0; transform: translateY(12px) scale(0.7); }
+  60%  { opacity: 1; transform: translateY(-3px) scale(1.05); }
+  100% { opacity: 1; transform: translateY(0) scale(1.0); }
+}
+
+.child-mascot.spawning {
+  animation: pop-in 0.3s ease-out forwards;
+}
+
+/* フェードアウト（子くろたん消滅時） */
+@keyframes fade-out {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.child-mascot.dying {
+  animation: fade-out 0.4s ease-out forwards;
+}
